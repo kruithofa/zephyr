@@ -14,7 +14,7 @@
 
 #include <kernel.h>
 #include <init.h>
-#include <arch/arm/cortex_m/cmsis.h>
+#include <arch/arm/aarch32/cortex_m/cmsis.h>
 #include <soc/nrfx_coredep.h>
 #include <logging/log.h>
 
@@ -42,21 +42,38 @@ static int nordicsemi_nrf53_init(struct device *arg)
 
 	ARG_UNUSED(arg);
 
+#if defined(CONFIG_SOC_NRF5340_CPUAPP)
+	/* Temporary workaround for incorrect SystemCoreClock initialization.
+	 * To be removed when system_nrf5340_application.c is corrected.
+	 */
+	SystemCoreClockUpdate();
+#endif
+
 	key = irq_lock();
 
 #ifdef CONFIG_NRF_ENABLE_CACHE
 #ifdef CONFIG_SOC_NRF5340_CPUAPP
 	/* Enable the instruction & data cache */
-	NRF_CACHE_S->ENABLE = CACHE_ENABLE_ENABLE_Msk;
+	NRF_CACHE->ENABLE = CACHE_ENABLE_ENABLE_Msk;
 #endif /* CONFIG_SOC_NRF5340_CPUAPP */
 #ifdef CONFIG_SOC_NRF5340_CPUNET
-	NRF_NVMC_NS->ICACHECNF |= NVMC_ICACHECNF_CACHEEN_Enabled;
+	NRF_NVMC->ICACHECNF |= NVMC_ICACHECNF_CACHEEN_Enabled;
 #endif /* CONFIG_SOC_NRF5340_CPUNET */
 #endif
 
 #if defined(CONFIG_SOC_NRF5340_CPUAPP) && \
 	!defined(CONFIG_TRUSTED_EXECUTION_NONSECURE)
 	*((u32_t *)0x500046D0) = 0x1;
+#endif
+
+#if defined(CONFIG_SOC_DCDC_NRF53X_APP)
+	NRF_REGULATORS->VREGMAIN.DCDCEN = 1;
+#endif
+#if defined(CONFIG_SOC_DCDC_NRF53X_NET)
+	NRF_REGULATORS->VREGRADIO.DCDCEN = 1;
+#endif
+#if defined(CONFIG_SOC_DCDC_NRF53X_HV)
+	NRF_REGULATORS->VREGH.DCDCEN = 1;
 #endif
 
 	/* Install default handler that simply resets the CPU

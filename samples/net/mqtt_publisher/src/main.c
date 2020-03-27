@@ -304,7 +304,7 @@ static void client_init(struct mqtt_client *client)
 
 	struct mqtt_sec_config *tls_config = &client->transport.tls.config;
 
-	tls_config->peer_verify = 2;
+	tls_config->peer_verify = TLS_PEER_VERIFY_REQUIRED;
 	tls_config->cipher_list = NULL;
 	tls_config->sec_tag_list = m_sec_tags;
 	tls_config->sec_tag_count = ARRAY_SIZE(m_sec_tags);
@@ -444,10 +444,6 @@ static void publisher(void)
 
 	rc = mqtt_disconnect(&client_ctx);
 	PRINT_RESULT("mqtt_disconnect", rc);
-
-	wait(APP_SLEEP_MSECS);
-	rc = mqtt_input(&client_ctx);
-	PRINT_RESULT("mqtt_input", rc);
 
 	LOG_INF("Bye!");
 }

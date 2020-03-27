@@ -118,7 +118,7 @@ static int init_reset(void)
 static int prepare_cb(struct lll_prepare_param *prepare_param)
 {
 	struct lll_scan *lll = prepare_param->param;
-	u32_t aa = sys_cpu_to_le32(0x8e89bed6);
+	u32_t aa = sys_cpu_to_le32(PDU_AC_ACCESS_ADDR);
 	u32_t ticks_at_event, ticks_at_start;
 	struct node_rx_pdu *node_rx;
 	struct evt_hdr *evt;
@@ -704,7 +704,7 @@ static inline u32_t isr_rx_pdu(struct lll_scan *lll, u8_t devmatch_ok,
 		evt = HDR_LLL2EVT(lll);
 		if (pdu_end_us > (HAL_TICKER_TICKS_TO_US(evt->ticks_slot) -
 				  502 - EVENT_OVERHEAD_START_US -
-				  (EVENT_JITTER_US << 1))) {
+				  EVENT_TICKER_RES_MARGIN_US)) {
 			return -ETIME;
 		}
 
@@ -803,6 +803,12 @@ static inline u32_t isr_rx_pdu(struct lll_scan *lll, u8_t devmatch_ok,
 					 radio_rx_chain_delay_get(0, 0) -
 					 CONFIG_BT_CTLR_GPIO_PA_OFFSET);
 #endif /* CONFIG_BT_CTLR_GPIO_PA_PIN */
+
+#if defined(CONFIG_BT_CTLR_CONN_RSSI)
+		if (rssi_ready) {
+			lll_conn->rssi_latest =  radio_rssi_get();
+		}
+#endif /* CONFIG_BT_CTLR_CONN_RSSI */
 
 		/* block CPU so that there is no CRC error on pdu tx,
 		 * this is only needed if we want the CPU to sleep.

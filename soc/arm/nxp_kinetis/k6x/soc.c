@@ -21,7 +21,7 @@
 #include <fsl_common.h>
 #include <fsl_clock.h>
 #include <arch/cpu.h>
-#include <arch/arm/cortex_m/cmsis.h>
+#include <arch/arm/aarch32/cortex_m/cmsis.h>
 
 #define PLLFLLSEL_MCGFLLCLK	(0)
 #define PLLFLLSEL_MCGPLLCLK	(1)
@@ -134,6 +134,11 @@ static int fsl_frdm_k64f_init(struct device *arg)
 
 	/* release I/O power hold to allow normal run state */
 	PMC->REGSC |= PMC_REGSC_ACKISO_MASK;
+
+#ifdef CONFIG_TEMP_KINETIS
+	/* enable bandgap buffer */
+	PMC->REGSC |= PMC_REGSC_BGBE_MASK;
+#endif /* CONFIG_TEMP_KINETIS */
 
 #if !defined(CONFIG_ARM_MPU)
 	/*

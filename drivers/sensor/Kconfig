@@ -20,6 +20,13 @@ config SENSOR_INIT_PRIORITY
 	help
 	  Sensor initialization priority.
 
+config SENSOR_SHELL
+	bool "Enable sensor shell"
+	depends on SHELL
+	default y
+	help
+	  This shell provides access to basic sensor data.
+
 comment "Device Drivers"
 
 source "drivers/sensor/adt7420/Kconfig"
@@ -112,6 +119,8 @@ source "drivers/sensor/mpu6050/Kconfig"
 
 source "drivers/sensor/ms5837/Kconfig"
 
+source "drivers/sensor/ms5607/Kconfig"
+
 source "drivers/sensor/nrf5/Kconfig"
 
 source "drivers/sensor/opt3001/Kconfig"
@@ -139,5 +148,7 @@ source "drivers/sensor/tmp112/Kconfig"
 source "drivers/sensor/tmp116/Kconfig"
 
 source "drivers/sensor/vl53l0x/Kconfig"
+
+source "drivers/sensor/nxp_kinetis_temp/Kconfig"
 
 endif # SENSOR

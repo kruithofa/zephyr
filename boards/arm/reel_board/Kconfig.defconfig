@@ -62,7 +62,7 @@ endif # SPI
 
 if USB
 
-config USB_NRF52840
+config USB_NRFX
 	default y
 
 config USB_DEVICE_STACK
@@ -83,5 +83,12 @@ config BT_CTLR
 	default y
 
 endif # BT
+
+if DISPLAY
+
+config SSD16XX
+	default y
+
+endif #DISPLAY
 
 endif # BOARD_REEL_BOARD || BOARD_REEL_BOARD_V2

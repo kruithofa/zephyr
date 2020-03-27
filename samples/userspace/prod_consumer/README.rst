@@ -46,7 +46,7 @@ The control loop is as follows:
  - Application B processing thread waits on new items in the queue. It
    then processes the data in-place, and after it's finished it places
    the processed data into another queue to be written back to the driver.
- - Applicarion A writeback thread monitors the outgoing data queue for
+ - Application A writeback thread monitors the outgoing data queue for
    new items containing processed data. As it gets them it will write
    such data back to the driver and free the buffer.
 
@@ -101,4 +101,3 @@ Sample Output
     I:processing payload #10 complete
     I:writing processed data blob back to the sample device
     I:SUCCESS
-

@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 menu "TLS configuration"
+	depends on MBEDTLS
 
 menu "Supported TLS version"
 

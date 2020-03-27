@@ -49,20 +49,6 @@ LOG_MODULE_REGISTER(os);
 #define BOOT_DELAY_BANNER ""
 #endif
 
-#ifdef BUILD_VERSION
-#define BOOT_BANNER "Booting Zephyr OS build "		\
-	 STRINGIFY(BUILD_VERSION) BOOT_DELAY_BANNER
-#else
-#define BOOT_BANNER "Booting Zephyr OS version "	\
-	 KERNEL_VERSION_STRING BOOT_DELAY_BANNER
-#endif
-
-#if !defined(CONFIG_BOOT_BANNER)
-#define PRINT_BOOT_BANNER() do { } while (false)
-#else
-#define PRINT_BOOT_BANNER() printk("***** " BOOT_BANNER " *****\n")
-#endif
-
 /* boot time measurement items */
 
 #ifdef CONFIG_BOOT_TIME_MEASUREMENT
@@ -226,6 +212,8 @@ void z_data_copy(void)
 
 /* LCOV_EXCL_STOP */
 
+bool z_sys_post_kernel;
+
 /**
  *
  * @brief Mainline for kernel's background thread
@@ -247,6 +235,8 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	static const unsigned int boot_delay;
 #endif
 
+	z_sys_post_kernel = true;
+
 	z_sys_device_do_config_level(_SYS_INIT_LEVEL_POST_KERNEL);
 #if CONFIG_STACK_POINTER_RANDOM
 	z_stack_adjust_initialized = 1;
@@ -256,7 +246,16 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 		       "ms (per build configuration) *****\n");
 		k_busy_wait(CONFIG_BOOT_DELAY * USEC_PER_MSEC);
 	}
-	PRINT_BOOT_BANNER();
+
+#if defined(CONFIG_BOOT_BANNER)
+#ifdef BUILD_VERSION
+	printk("*** Booting Zephyr OS build %s %s ***\n",
+			STRINGIFY(BUILD_VERSION), BOOT_DELAY_BANNER);
+#else
+	printk("*** Booting Zephyr OS version %s %s ***\n",
+			KERNEL_VERSION_STRING, BOOT_DELAY_BANNER);
+#endif
+#endif
 
 	/* Final init level before app starts */
 	z_sys_device_do_config_level(_SYS_INIT_LEVEL_APPLICATION);
@@ -301,15 +300,15 @@ void __weak main(void)
 /* LCOV_EXCL_STOP */
 
 #if defined(CONFIG_MULTITHREADING)
-static void init_idle_thread(struct k_thread *thr, k_thread_stack_t *stack)
+static void init_idle_thread(struct k_thread *thread, k_thread_stack_t *stack)
 {
-	z_setup_new_thread(thr, stack,
+	z_setup_new_thread(thread, stack,
 			  CONFIG_IDLE_STACK_SIZE, idle, NULL, NULL, NULL,
 			  K_LOWEST_THREAD_PRIO, K_ESSENTIAL, IDLE_THREAD_NAME);
-	z_mark_thread_as_started(thr);
+	z_mark_thread_as_started(thread);
 
 #ifdef CONFIG_SMP
-	thr->base.is_idle = 1U;
+	thread->base.is_idle = 1U;
 #endif
 }
 #endif /* CONFIG_MULTITHREADING */
@@ -371,14 +370,11 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 			   CONFIG_MAIN_STACK_SIZE, bg_thread_main,
 			   NULL, NULL, NULL,
 			   CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL, "main");
-	sys_trace_thread_create(&z_main_thread);
-
 	z_mark_thread_as_started(&z_main_thread);
 	z_ready_thread(&z_main_thread);
 
 	init_idle_thread(&z_idle_thread, z_idle_stack);
 	_kernel.cpus[0].idle_thread = &z_idle_thread;
-	sys_trace_thread_create(&z_idle_thread);
 
 #if defined(CONFIG_SMP) && CONFIG_MP_NUM_CPUS > 1
 	init_idle_thread(_idle_thread1, _idle_stack1);
@@ -426,7 +422,7 @@ static FUNC_NORETURN void switch_to_main_thread(void)
 }
 #endif /* CONFIG_MULTITHREADING */
 
-static void z_early_boot_rand_get(u8_t *buf, size_t length)
+void z_early_boot_rand_get(u8_t *buf, size_t length)
 {
 	int n = sizeof(u32_t);
 #ifdef CONFIG_ENTROPY_HAS_DRIVER
@@ -480,15 +476,6 @@ sys_rand_fallback:
 
 		length -= n;
 	}
-}
-
-u32_t z_early_boot_rand32_get(void)
-{
-	u32_t retval;
-
-	z_early_boot_rand_get((u8_t *)&retval, sizeof(retval));
-
-	return retval;
 }
 
 /**

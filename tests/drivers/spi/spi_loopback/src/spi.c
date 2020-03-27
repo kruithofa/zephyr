@@ -142,6 +142,62 @@ static int spi_complete_loop(struct device *dev, struct spi_config *spi_conf)
 	return 0;
 }
 
+
+static int spi_null_tx_buf(struct device *dev, struct spi_config *spi_conf)
+{
+	static const u8_t EXPECTED_NOP_RETURN_BUF[BUF_SIZE] = { 0 };
+	(void)memset(buffer_rx, 0x77, BUF_SIZE);
+
+	const struct spi_buf tx_bufs[] = {
+		{
+	       /*
+		* According to documentation, when sending NULL tx buf -
+		*  NOP frames should be sent on MOSI line
+		*/
+			.buf = NULL,
+			.len = BUF_SIZE,
+		},
+	};
+	const struct spi_buf rx_bufs[] = {
+		{
+			.buf = buffer_rx,
+			.len = BUF_SIZE,
+		},
+	};
+	const struct spi_buf_set tx = {
+		.buffers = tx_bufs,
+		.count = ARRAY_SIZE(tx_bufs)
+	};
+	const struct spi_buf_set rx = {
+		.buffers = rx_bufs,
+		.count = ARRAY_SIZE(rx_bufs)
+	};
+
+	int ret;
+
+	LOG_INF("Start");
+
+	ret = spi_transceive(dev, spi_conf, &tx, &rx);
+	if (ret) {
+		LOG_ERR("Code %d", ret);
+		zassert_false(ret, "SPI transceive failed");
+		return ret;
+	}
+
+
+	if (memcmp(buffer_rx, EXPECTED_NOP_RETURN_BUF, BUF_SIZE)) {
+		to_display_format(buffer_rx, BUF_SIZE, buffer_print_rx);
+		LOG_ERR("Rx Buffer should contain NOP frames but got: %s",
+			buffer_print_rx);
+		zassert_false(1, "Buffer not as expected");
+		return -1;
+	}
+
+	LOG_INF("Passed");
+
+	return 0;
+}
+
 static int spi_rx_half_start(struct device *dev, struct spi_config *spi_conf)
 {
 	const struct spi_buf tx_bufs[] = {
@@ -427,7 +483,7 @@ static int spi_resource_lock_test(struct device *lock_dev,
 	return 0;
 }
 
-void testing_spi(void)
+void test_spi_loopback(void)
 {
 #if (CONFIG_SPI_ASYNC)
 	struct k_thread async_thread;
@@ -462,6 +518,7 @@ void testing_spi(void)
 #endif
 
 	if (spi_complete_loop(spi_slow, &spi_cfg_slow) ||
+	    spi_null_tx_buf(spi_slow, &spi_cfg_slow) ||
 	    spi_rx_half_start(spi_slow, &spi_cfg_slow) ||
 	    spi_rx_half_end(spi_slow, &spi_cfg_slow) ||
 	    spi_rx_every_4(spi_slow, &spi_cfg_slow)
@@ -473,6 +530,7 @@ void testing_spi(void)
 	}
 
 	if (spi_complete_loop(spi_fast, &spi_cfg_fast) ||
+	    spi_null_tx_buf(spi_fast, &spi_cfg_fast) ||
 	    spi_rx_half_start(spi_fast, &spi_cfg_fast) ||
 	    spi_rx_half_end(spi_fast, &spi_cfg_fast) ||
 	    spi_rx_every_4(spi_fast, &spi_cfg_fast)
@@ -500,6 +558,6 @@ end:
 /*test case main entry*/
 void test_main(void)
 {
-	ztest_test_suite(test_spi, ztest_unit_test(testing_spi));
+	ztest_test_suite(test_spi, ztest_unit_test(test_spi_loopback));
 	ztest_run_test_suite(test_spi);
 }

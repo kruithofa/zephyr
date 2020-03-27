@@ -24,7 +24,7 @@
 #include <stm32wbxx.h>
 
 /* Add include for DTS generated information */
-#include <generated_dts_board.h>
+#include <devicetree.h>
 
 #ifdef CONFIG_GPIO_STM32
 #include <stm32wbxx_ll_gpio.h>
@@ -71,6 +71,11 @@
 
 #ifdef CONFIG_WWDG_STM32
 #include <stm32wbxx_ll_wwdg.h>
+#endif
+
+#ifdef CONFIG_STM32_LPTIM_TIMER
+#include <stm32wbxx_ll_lptim.h>
+#include <stm32wbxx_ll_system.h>
 #endif
 
 #endif /* !_ASMLANGUAGE */

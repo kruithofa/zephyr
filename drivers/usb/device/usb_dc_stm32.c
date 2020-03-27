@@ -60,20 +60,6 @@ LOG_MODULE_REGISTER(usb_dc_stm32);
 #endif
 
 /*
- * USB LL API provides the EP_TYPE_* defines. STM32Cube does not
- * provide USB LL API for STM32F0, STM32F3 and STM32L0 families.
- * Map EP_TYPE_* defines to PCD_EP_TYPE_* defines
- */
-#if defined(CONFIG_SOC_SERIES_STM32F3X) || \
-	defined(CONFIG_SOC_SERIES_STM32F0X) || \
-	defined(CONFIG_SOC_SERIES_STM32L0X)
-#define EP_TYPE_CTRL PCD_EP_TYPE_CTRL
-#define EP_TYPE_ISOC PCD_EP_TYPE_ISOC
-#define EP_TYPE_BULK PCD_EP_TYPE_BULK
-#define EP_TYPE_INTR PCD_EP_TYPE_INTR
-#endif
-
-/*
  * USB and USB_OTG_FS are defined in STM32Cube HAL and allows to distinguish
  * between two kind of USB DC. STM32 F0, F3, L0 and G4 series support USB device
  * controller. STM32 F4 and F7 series support USB_OTG_FS device controller.
@@ -807,7 +793,7 @@ int usb_dc_ep_read_continue(u8_t ep)
 	/* If no more data in the buffer, start a new read transaction.
 	 * DataOutStageCallback will called on transaction complete.
 	 */
-	if (ep != EP0_OUT && !ep_state->read_count) {
+	if (!ep_state->read_count) {
 		usb_dc_ep_start_read(ep, usb_dc_stm32_state.ep_buf[EP_IDX(ep)],
 				     EP_MPS);
 	}

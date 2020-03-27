@@ -19,7 +19,7 @@
 #include <stdbool.h>
 #include <kernel_structs.h>
 #include <arch/common/ffs.h>
-#include <misc/util.h>
+#include <sys/util.h>
 #include <arch/x86/ia32/thread.h>
 #include <arch/x86/ia32/syscall.h>
 
@@ -379,8 +379,8 @@ struct k_thread;
  * The @a options parameter indicates which floating point register sets
  * will be used by the specified thread:
  *
- *  a) K_FP_REGS  indicates x87 FPU and MMX registers only
- *  b) K_SSE_REGS indicates SSE registers (and also x87 FPU and MMX registers)
+ * - K_FP_REGS  indicates x87 FPU and MMX registers only
+ * - K_SSE_REGS indicates SSE registers (and also x87 FPU and MMX registers)
  *
  * Invoking this routine initializes the thread's floating point context info
  * to that of an FPU that has been reset. The next time the thread is scheduled
@@ -410,17 +410,15 @@ extern void k_float_enable(struct k_thread *thread, unsigned int options);
 extern struct task_state_segment _main_tss;
 #endif
 
-#if CONFIG_X86_KERNEL_OOPS
 #define ARCH_EXCEPT(reason_p) do { \
 	__asm__ volatile( \
 		"push %[reason]\n\t" \
 		"int %[vector]\n\t" \
 		: \
-		: [vector] "i" (CONFIG_X86_KERNEL_OOPS_VECTOR), \
+		: [vector] "i" (Z_X86_OOPS_VECTOR), \
 		  [reason] "i" (reason_p)); \
 	CODE_UNREACHABLE; \
 } while (false)
-#endif
 
 #ifdef __cplusplus
 }

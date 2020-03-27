@@ -159,7 +159,11 @@ struct connection {
 
 #if defined(CONFIG_BT_CTLR_LE_ENC)
 		struct {
-			u8_t  initiate:1;
+			enum {
+				LLCP_ENC_STATE_INPROG,
+				LLCP_ENC_STATE_INIT,
+				LLCP_ENC_STATE_LTK_WAIT,
+			} state:2 __packed;
 			u8_t  error_code;
 			u8_t  skd[16];
 		} encryption;
@@ -328,6 +332,10 @@ struct connection {
 	u8_t  rssi_reported;
 	u8_t  rssi_sample_count;
 #endif /* CONFIG_BT_CTLR_CONN_RSSI */
+
+#if defined(CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL)
+	s8_t tx_pwr_lvl;
+#endif /* CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL */
 };
 #define CONNECTION_T_SIZE MROUND(sizeof(struct connection))
 

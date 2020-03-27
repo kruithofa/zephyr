@@ -1138,7 +1138,7 @@ static u8_t va_add(u8_t *label_uuid, u16_t *addr)
 	if (update) {
 		update->ref++;
 		va_store(update);
-		return 0;
+		return STATUS_SUCCESS;
 	}
 
 	if (!free_slot) {
@@ -1170,6 +1170,7 @@ static u8_t va_del(u8_t *label_uuid, u16_t *addr)
 		}
 
 		va_store(update);
+		return STATUS_SUCCESS;
 	}
 
 	if (addr) {
@@ -2784,9 +2785,7 @@ static void lpn_timeout_get(struct bt_mesh_model *model,
 	timeout = k_delayed_work_remaining_get(&frnd->timer) / 100;
 
 send_rsp:
-	net_buf_simple_add_u8(&msg, timeout);
-	net_buf_simple_add_u8(&msg, timeout >> 8);
-	net_buf_simple_add_u8(&msg, timeout >> 16);
+	net_buf_simple_add_le24(&msg, timeout);
 
 	if (bt_mesh_model_send(model, ctx, &msg, NULL, NULL)) {
 		BT_ERR("Unable to send LPN PollTimeout Status");

@@ -78,7 +78,6 @@ struct k_thread ct_thread;
 K_THREAD_STACK_DEFINE(ct_stack, STACKSIZE);
 
 _app_enc_d char encMSG[] = "ENC!\n";
-_app_enc_d int enc_state = 1;
 _app_enc_b char enc_pt[50];  /* Copy form shared pt */
 _app_enc_b char enc_ct[50]; /* Copy to shared ct */
 
@@ -104,6 +103,15 @@ void main(void)
 	struct k_mem_partition *dom0_parts[] = {&part0, &part1};
 	k_tid_t tPT, tENC, tCT;
 
+	fBUFIN = 0; /* clear flags */
+	fBUFOUT = 0;
+	calc_rev_wheel((BYTE *) &W1, (BYTE *)&W1R);
+	calc_rev_wheel((BYTE *) &W2, (BYTE *)&W2R);
+	calc_rev_wheel((BYTE *) &W3, (BYTE *)&W3R);
+	IW1 = 0;
+	IW2 = 0;
+	IW3 = 0;
+
 	k_thread_access_grant(k_current_get(), &allforone);
 
 	/*
@@ -116,7 +124,7 @@ void main(void)
 			K_FOREVER);
 	k_thread_access_grant(tENC, &allforone);
 	/* use K_FOREVER followed by k_thread_start*/
-	printk("ENC Thread Created %08X\n", (unsigned int) tENC);
+	printk("ENC Thread Created %p\n", tENC);
 	k_mem_domain_init(&dom1, 3, dom1_parts);
 	printk("Partitions added to dom1\n");
 	k_mem_domain_add_thread(&dom1, tENC);
@@ -128,7 +136,7 @@ void main(void)
 			-1, K_USER,
 			K_FOREVER);
 	k_thread_access_grant(tPT, &allforone);
-	printk("PT Thread Created %08X\n", (unsigned int) tPT);
+	printk("PT Thread Created %p\n", tPT);
 	k_mem_domain_init(&dom0, 2, dom0_parts);
 	k_mem_domain_add_thread(&dom0, tPT);
 	printk("dom0 Created\n");
@@ -138,7 +146,7 @@ void main(void)
 			-1, K_USER,
 			K_FOREVER);
 	k_thread_access_grant(tCT, &allforone);
-	printk("CT Thread Created %08X\n", (unsigned int) tCT);
+	printk("CT Thread Created %p\n", tCT);
 	k_mem_domain_init(&dom2, 2, dom2_parts);
 	k_mem_domain_add_thread(&dom2, tCT);
 	printk("dom2 Created\n");
@@ -153,8 +161,6 @@ void main(void)
 	k_thread_start(&ct_thread);
 	k_sem_give(&allforone);
 	printk("CT thread started\n");
-	k_thread_abort(k_current_get());
-
 }
 
 
@@ -169,17 +175,6 @@ void enc(void)
 {
 
 	int index, index_out;
-	if (enc_state == 1) {
-		fBUFIN = 0; /* clear flags */
-		fBUFOUT = 0;
-		calc_rev_wheel((BYTE *) &W1, (BYTE *)&W1R);
-		calc_rev_wheel((BYTE *) &W2, (BYTE *)&W2R);
-		calc_rev_wheel((BYTE *) &W3, (BYTE *)&W3R);
-		IW1 = 0;
-		IW2 = 0;
-		IW3 = 0;
-		enc_state = 0;
-	}
 
 	while (1) {
 		k_sem_take(&allforone, K_FOREVER);

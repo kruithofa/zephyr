@@ -38,7 +38,8 @@
 #include "ll_feat.h"
 #include "ll_settings.h"
 
-#define LOG_MODULE_NAME bt_ctlr_llsw_ull_conn
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
+#define LOG_MODULE_NAME bt_ctlr_ull_conn
 #include "common/log.h"
 #include <soc.h>
 #include "hal/debug.h"
@@ -1301,12 +1302,6 @@ static void conn_cleanup(struct ll_conn *conn, u8_t reason)
 				    ticker_op_stop_cb, (void *)lll);
 	LL_ASSERT((ticker_status == TICKER_STATUS_SUCCESS) ||
 		  (ticker_status == TICKER_STATUS_BUSY));
-
-	/* Invalidate the connection context */
-	lll->handle = 0xFFFF;
-
-	/* Demux and flush Tx PDUs that remain enqueued in thread context */
-	ull_conn_tx_demux(UINT8_MAX);
 }
 
 static void tx_ull_flush(struct ll_conn *conn)

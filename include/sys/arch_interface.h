@@ -136,13 +136,13 @@ void arch_cpu_idle(void);
  *
  * The requirements for arch_cpu_atomic_idle() are as follows:
  *
- * 1) Enabling interrupts and entering a low-power mode needs to be
+ * -# Enabling interrupts and entering a low-power mode needs to be
  *    atomic, i.e. there should be no period of time where interrupts are
  *    enabled before the processor enters a low-power mode.  See the comments
  *    in k_lifo_get(), for example, of the race condition that
  *    occurs if this requirement is not met.
  *
- * 2) After waking up from the low-power mode, the interrupt lockout state
+ * -# After waking up from the low-power mode, the interrupt lockout state
  *    must be restored as indicated in the 'key' input parameter.
  *
  * @see k_cpu_atomic_idle()
@@ -158,6 +158,13 @@ void arch_cpu_atomic_idle(unsigned int key);
  * @addtogroup arch-smp
  * @{
  */
+
+/**
+ * Per-cpu entry function
+ *
+ * @param context parameter, implementation specific
+ */
+typedef FUNC_NORETURN void (*arch_cpustart_t)(void *data);
 
 /**
  * @brief Start a numbered CPU on a MP-capable system
@@ -176,12 +183,11 @@ void arch_cpu_atomic_idle(unsigned int key);
  * @param cpu_num Integer number of the CPU
  * @param stack Stack memory for the CPU
  * @param sz Stack buffer size, in bytes
- * @param fn Function to begin running on the CPU.  First argument is
- *        an irq_unlock() key.
+ * @param fn Function to begin running on the CPU.
  * @param arg Untyped argument to be passed to "fn"
  */
 void arch_start_cpu(int cpu_num, k_thread_stack_t *stack, int sz,
-		    void (*fn)(int key, void *data), void *arg);
+		    arch_cpustart_t fn, void *arg);
 /** @} */
 
 
@@ -301,8 +307,6 @@ int arch_irq_connect_dynamic(unsigned int irq, unsigned int priority,
  */
 
 #ifdef CONFIG_IRQ_OFFLOAD
-typedef void (*irq_offload_routine_t)(void *parameter);
-
 /**
  * Run a function in interrupt context.
  *

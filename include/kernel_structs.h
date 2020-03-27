@@ -59,8 +59,11 @@
 /* Thread is being aborted (SMP only) */
 #define _THREAD_ABORTING (BIT(5))
 
+/* Thread was aborted in interrupt context (SMP only) */
+#define _THREAD_ABORTED_IN_ISR (BIT(6))
+
 /* Thread is present in the ready queue */
-#define _THREAD_QUEUED (BIT(6))
+#define _THREAD_QUEUED (BIT(7))
 
 /* end - states */
 
@@ -110,6 +113,11 @@ struct _cpu {
 #ifdef CONFIG_USERSPACE
 	/* current syscall frame pointer */
 	void *syscall_frame;
+#endif
+
+#if (CONFIG_NUM_METAIRQ_PRIORITIES > 0) && (CONFIG_NUM_COOP_PRIORITIES > 0)
+	/* Coop thread preempted by current metairq, or NULL */
+	struct k_thread *metairq_preempted;
 #endif
 
 #ifdef CONFIG_TIMESLICING

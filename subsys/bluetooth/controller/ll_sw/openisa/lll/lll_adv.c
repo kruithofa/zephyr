@@ -118,7 +118,7 @@ static int init_reset(void)
 static int prepare_cb(struct lll_prepare_param *prepare_param)
 {
 	struct lll_adv *lll = prepare_param->param;
-	u32_t aa = sys_cpu_to_le32(0x8e89bed6);
+	u32_t aa = sys_cpu_to_le32(PDU_AC_ACCESS_ADDR);
 	u32_t ticks_at_event, ticks_at_start;
 	struct evt_hdr *evt;
 	u32_t remainder_us;
@@ -361,7 +361,8 @@ static void isr_tx(void *param)
 	 */
 	radio_tmr_end_capture();
 
-	if (IS_ENABLED(CONFIG_BT_CTLR_SCAN_REQ_RSSI)) {
+	if (IS_ENABLED(CONFIG_BT_CTLR_SCAN_REQ_RSSI) ||
+	    IS_ENABLED(CONFIG_BT_CTLR_CONN_RSSI)) {
 		radio_rssi_measure();
 	}
 
@@ -716,6 +717,11 @@ static inline int isr_rx_pdu(struct lll_adv *lll,
 			lll_prof_cputime_capture();
 		}
 
+#if defined(CONFIG_BT_CTLR_CONN_RSSI)
+		if (rssi_ready) {
+			lll->conn->rssi_latest =  radio_rssi_get();
+		}
+#endif /* CONFIG_BT_CTLR_CONN_RSSI */
 		/* Stop further LLL radio events */
 		ret = lll_stop(lll);
 		LL_ASSERT(!ret);

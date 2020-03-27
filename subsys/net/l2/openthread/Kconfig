@@ -12,6 +12,7 @@ menuconfig NET_L2_OPENTHREAD
 	depends on FLASH_PAGE_LAYOUT
 	depends on CPLUSPLUS
 	depends on REBOOT
+	depends on SETTINGS
 	select OPENTHREAD_PLAT
 	select MBEDTLS
 	select MBEDTLS_ENABLE_HEAP
@@ -144,6 +145,15 @@ config OPENTHREAD_FTD
 config OPENTHREAD_MTD
 	bool "MTD - Minimal Thread Device"
 endchoice
+
+config OPENTHREAD_MTD_SED
+	bool "SED - Sleepy End Device"
+	depends on OPENTHREAD_MTD
+
+config OPENTHREAD_POLL_PERIOD
+	int "Poll period for sleepy end devices [ms]"
+	default 236000
+	depends on OPENTHREAD_MTD_SED
 
 config OPENTHREAD_SHELL
 	bool "Enable OpenThread shell"

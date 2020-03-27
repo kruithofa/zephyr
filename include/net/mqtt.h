@@ -499,6 +499,9 @@ struct mqtt_client {
 	/** MQTT protocol version. */
 	u8_t protocol_version;
 
+	/** Unanswered PINGREQ count on this connection. */
+	s8_t unacked_ping;
+
 	/** Will retain flag, 1 if will message shall be retained persistently.
 	 */
 	u8_t will_retain : 1;
@@ -703,6 +706,18 @@ int mqtt_abort(struct mqtt_client *client);
  * @return 0 or a negative error code (errno.h) indicating reason of failure.
  */
 int mqtt_live(struct mqtt_client *client);
+
+/**
+ * @brief Helper function to determine when next keep alive message should be
+ *        sent. Can be used for instance as a source for `poll` timeout.
+ *
+ * @param[in] client Client instance for which the procedure is requested.
+ *
+ * @return Time in milliseconds until next keep alive message is expected to
+ *         be sent. Function will return UINT32_MAX if keep alive messages are
+ *         not enabled.
+ */
+u32_t mqtt_keepalive_time_left(const struct mqtt_client *client);
 
 /**
  * @brief Receive an incoming MQTT packet. The registered callback will be

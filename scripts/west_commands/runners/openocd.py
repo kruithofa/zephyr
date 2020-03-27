@@ -30,9 +30,13 @@ class OpenOcdBinaryRunner(ZephyrBinaryRunner):
                 config = default
         self.openocd_config = config
 
-        search_args = []
+        if path.exists(self.openocd_config):
+            search_args = ['-s', path.dirname(self.openocd_config)]
+        else:
+            search_args = []
+
         if cfg.openocd_search is not None:
-            search_args = ['-s', cfg.openocd_search]
+            search_args.extend(['-s', cfg.openocd_search])
         self.openocd_cmd = [cfg.openocd] + search_args
         self.hex_name = cfg.hex_file
         self.elf_name = cfg.elf_file
@@ -118,14 +122,30 @@ class OpenOcdBinaryRunner(ZephyrBinaryRunner):
             raise ValueError('Cannot flash; verify command is missing')
 
         self.logger.info('Flashing file: {}'.format(self.hex_name))
+
+        pre_init_cmd = []
+        pre_load_cmd = []
+        post_verify_cmd = []
+        for i in self.pre_init:
+            pre_init_cmd.append("-c")
+            pre_init_cmd.append(i)
+
+        for i in self.pre_load:
+            pre_load_cmd.append("-c")
+            pre_load_cmd.append(i)
+
+        for i in self.post_verify:
+            post_verify_cmd.append("-c")
+            post_verify_cmd.append(i)
+
         cmd = (self.openocd_cmd + self.cfg_cmd +
-               self.pre_init + ['-c', 'init',
+               pre_init_cmd + ['-c', 'init',
                                 '-c', 'targets'] +
-               self.pre_load + ['-c', 'reset halt',
+               pre_load_cmd + ['-c', 'reset halt',
                                 '-c', self.load_cmd + ' ' + self.hex_name,
                                 '-c', 'reset halt'] +
                ['-c', self.verify_cmd + ' ' + self.hex_name] +
-               self.post_verify +
+               post_verify_cmd +
                ['-c', 'reset run',
                 '-c', 'shutdown'])
         self.check_call(cmd)
@@ -136,11 +156,16 @@ class OpenOcdBinaryRunner(ZephyrBinaryRunner):
         if self.elf_name is None:
             raise ValueError('Cannot debug; no .elf specified')
 
+        pre_init_cmd = []
+        for i in self.pre_init:
+            pre_init_cmd.append("-c")
+            pre_init_cmd.append(i)
+
         server_cmd = (self.openocd_cmd + self.cfg_cmd +
                       ['-c', 'tcl_port {}'.format(self.tcl_port),
                        '-c', 'telnet_port {}'.format(self.telnet_port),
                        '-c', 'gdb_port {}'.format(self.gdb_port)] +
-                      self.pre_init + ['-c', 'init',
+                      pre_init_cmd + ['-c', 'init',
                                        '-c', 'targets',
                                        '-c', 'halt'])
         gdb_cmd = (self.gdb_cmd + self.tui_arg +
@@ -150,11 +175,16 @@ class OpenOcdBinaryRunner(ZephyrBinaryRunner):
         self.run_server_and_client(server_cmd, gdb_cmd)
 
     def do_debugserver(self, **kwargs):
+        pre_init_cmd = []
+        for i in self.pre_init:
+            pre_init_cmd.append("-c")
+            pre_init_cmd.append(i)
+
         cmd = (self.openocd_cmd + self.cfg_cmd +
                ['-c', 'tcl_port {}'.format(self.tcl_port),
                 '-c', 'telnet_port {}'.format(self.telnet_port),
                 '-c', 'gdb_port {}'.format(self.gdb_port)] +
-               self.pre_init + ['-c', 'init',
+               pre_init_cmd + ['-c', 'init',
                                 '-c', 'targets',
                                 '-c', 'reset halt'])
         self.check_call(cmd)

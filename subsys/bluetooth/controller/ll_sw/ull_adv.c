@@ -12,6 +12,7 @@
 
 #include "hal/ccm.h"
 #include "hal/ticker.h"
+#include "hal/radio.h"
 
 #include "util/util.h"
 #include "util/mem.h"
@@ -42,7 +43,8 @@
 #include "ull_conn_internal.h"
 #include "ull_internal.h"
 
-#define LOG_MODULE_NAME bt_ctlr_llsw_ull_adv
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
+#define LOG_MODULE_NAME bt_ctlr_ull_adv
 #include "common/log.h"
 #include <soc.h>
 #include "hal/debug.h"
@@ -445,14 +447,11 @@ u8_t ll_adv_enable(u8_t enable)
 	}
 
 	lll = &adv->lll;
+#if defined(CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL)
+	lll->tx_pwr_lvl = RADIO_TXP_DEFAULT;
+#endif /* CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL */
 
 	pdu_adv = lll_adv_data_peek(lll);
-	if (pdu_adv->tx_addr) {
-		if (!mem_nz(ll_addr_get(1, NULL), BDADDR_SIZE)) {
-			return BT_HCI_ERR_INVALID_PARAM;
-		}
-	}
-
 	pdu_scan = lll_adv_scan_rsp_peek(lll);
 
 	if (0) {
@@ -469,8 +468,14 @@ u8_t ll_adv_enable(u8_t enable)
 
 		/* AdvA, fill here at enable */
 		if (h->adv_addr) {
-			memcpy(ptr, ll_addr_get(pdu_adv->tx_addr, NULL),
-			       BDADDR_SIZE);
+			u8_t *tx_addr = ll_addr_get(pdu_adv->tx_addr, NULL);
+
+			/* TODO: Privacy check */
+			if (pdu_adv->tx_addr && !mem_nz(tx_addr, BDADDR_SIZE)) {
+				return BT_HCI_ERR_INVALID_PARAM;
+			}
+
+			memcpy(ptr, tx_addr, BDADDR_SIZE);
 		}
 
 		/* TODO: TargetA, fill here at enable */
@@ -495,17 +500,27 @@ u8_t ll_adv_enable(u8_t enable)
 
 			ull_filter_adv_pdu_update(adv, rl_idx, pdu_adv);
 			ull_filter_adv_pdu_update(adv, rl_idx, pdu_scan);
+
 			priv = true;
 		}
 #endif /* !CONFIG_BT_CTLR_PRIVACY */
 
 		if (!priv) {
-			memcpy(&pdu_adv->adv_ind.addr[0],
-			       ll_addr_get(pdu_adv->tx_addr, NULL),
+			u8_t *tx_addr = ll_addr_get(pdu_adv->tx_addr, NULL);
+
+			memcpy(&pdu_adv->adv_ind.addr[0], tx_addr,
 			       BDADDR_SIZE);
-			memcpy(&pdu_scan->scan_rsp.addr[0],
-			       ll_addr_get(pdu_adv->tx_addr, NULL),
+			memcpy(&pdu_scan->scan_rsp.addr[0], tx_addr,
 			       BDADDR_SIZE);
+		}
+
+		/* In case the local IRK was not set or no match was
+		 * found the fallback address was used instead, check
+		 * that a valid address has been set.
+		 */
+		if (pdu_adv->tx_addr &&
+		    !mem_nz(pdu_adv->adv_ind.addr, BDADDR_SIZE)) {
+			return BT_HCI_ERR_INVALID_PARAM;
 		}
 	}
 
@@ -595,6 +610,10 @@ u8_t ll_adv_enable(u8_t enable)
 		conn_lll->rssi_reported = 0x7F;
 		conn_lll->rssi_sample_count = 0;
 #endif /* CONFIG_BT_CTLR_CONN_RSSI */
+
+#if defined(CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL)
+		conn_lll->tx_pwr_lvl = RADIO_TXP_DEFAULT;
+#endif /* CONFIG_BT_CTLR_TX_PWR_DYNAMIC_CONTROL */
 
 		/* FIXME: BEGIN: Move to ULL? */
 		conn_lll->role = 1;
@@ -696,7 +715,7 @@ u8_t ll_adv_enable(u8_t enable)
 		u32_t adv_size		= ll_hdr_size + ADVA_SIZE;
 		const u8_t ll_hdr_us	= BYTES2US(ll_hdr_size, phy);
 		const u8_t rx_to_us	= EVENT_RX_TO_US(phy);
-		const u8_t rxtx_turn_us = EVENT_RX_TX_TURNARROUND(phy);
+		const u8_t rxtx_turn_us = EVENT_RX_TX_TURNAROUND(phy);
 		const u16_t conn_ind_us = ll_hdr_us +
 					  BYTES2US(INITA_SIZE + ADVA_SIZE +
 						   LLDATA_SIZE, phy);
@@ -715,7 +734,7 @@ u8_t ll_adv_enable(u8_t enable)
 		if (pdu_adv->type == PDU_ADV_TYPE_NONCONN_IND) {
 			adv_size += adv_data_len;
 			slot_us += BYTES2US(adv_size, phy) * adv_chn_cnt +
-				    EVENT_IFS_MAX_US * (adv_chn_cnt - 1);
+				   rxtx_turn_us * (adv_chn_cnt - 1);
 		} else {
 			if (pdu_adv->type == PDU_ADV_TYPE_DIRECT_IND) {
 				adv_size += TARGETA_SIZE;
@@ -804,7 +823,7 @@ u8_t ll_adv_enable(u8_t enable)
 				   TICKER_USER_ID_THREAD,
 				   (TICKER_ID_ADV_BASE + handle),
 				   ticks_anchor, 0,
-				   adv->evt.ticks_slot,
+				   (adv->evt.ticks_slot + ticks_slot_overhead),
 				   TICKER_NULL_REMAINDER, TICKER_NULL_LAZY,
 				   (adv->evt.ticks_slot + ticks_slot_overhead),
 				   ticker_cb, adv,
@@ -1146,7 +1165,7 @@ static void disabled_cb(void *param)
 
 	cc = (void *)rx->pdu;
 	memset(cc, 0x00, sizeof(struct node_rx_cc));
-	cc->status = 0x3c;
+	cc->status = BT_HCI_ERR_ADV_TIMEOUT;
 
 	ftr = &(rx->hdr.rx_ftr);
 	ftr->param = param;

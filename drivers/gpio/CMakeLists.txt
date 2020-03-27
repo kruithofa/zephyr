@@ -3,7 +3,6 @@
 zephyr_library()
 
 zephyr_library_sources_ifdef(CONFIG_GPIO_CC13XX_CC26XX gpio_cc13xx_cc26xx.c)
-zephyr_library_sources_ifdef(CONFIG_GPIO_CC2650     gpio_cc2650.c)
 zephyr_library_sources_ifdef(CONFIG_GPIO_CC32XX     gpio_cc32xx.c)
 zephyr_library_sources_ifdef(CONFIG_GPIO_CMSDK_AHB  gpio_cmsdk_ahb.c)
 zephyr_library_sources_ifdef(CONFIG_GPIO_DW         gpio_dw.c)
@@ -26,6 +25,7 @@ zephyr_library_sources_ifdef(CONFIG_GPIO_INTEL_APL  gpio_intel_apl.c)
 zephyr_library_sources_ifdef(CONFIG_GPIO_STELLARIS  gpio_stellaris.c)
 zephyr_library_sources_ifdef(CONFIG_GPIO_RV32M1     gpio_rv32m1.c)
 zephyr_library_sources_ifdef(CONFIG_GPIO_HT16K33    gpio_ht16k33.c)
+zephyr_library_sources_ifdef(CONFIG_GPIO_LMP90XXX   gpio_lmp90xxx.c)
 
 zephyr_library_sources_ifdef(CONFIG_GPIO_SHELL      gpio_shell.c)
 

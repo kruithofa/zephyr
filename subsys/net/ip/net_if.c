@@ -436,6 +436,9 @@ struct net_if *net_if_get_default(void)
 #if defined(CONFIG_NET_DEFAULT_IF_CANBUS)
 	iface = net_if_get_first_by_type(&NET_L2_GET_NAME(CANBUS));
 #endif
+#if defined(CONFIG_NET_DEFAULT_IF_PPP)
+	iface = net_if_get_first_by_type(&NET_L2_GET_NAME(PPP));
+#endif
 
 	return iface ? iface : __net_if_start;
 }
@@ -576,6 +579,7 @@ static void iface_router_expired(struct k_work *work)
 {
 	u32_t current_time = k_uptime_get_32();
 	struct net_if_router *router, *next;
+	sys_snode_t *prev_node = NULL;
 
 	ARG_UNUSED(work);
 
@@ -587,11 +591,13 @@ static void iface_router_expired(struct k_work *work)
 			/* We have to loop on all active routers as their
 			 * lifetime differ from each other.
 			 */
+			prev_node = &router->node;
 			continue;
 		}
 
 		iface_router_notify_deletion(router, "has expired");
-
+		sys_slist_remove(&active_router_timers,
+				 prev_node, &router->node);
 		router->is_used = false;
 	}
 
