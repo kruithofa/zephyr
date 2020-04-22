@@ -4,36 +4,48 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* LL Control Procedure connection related data */
+/* Temporary data structure to avoid change ll_conn/lll_conn to much
+ * and having to update all the dependencies
+ */
 struct ull_cp_conn {
-	/* Tx Queue Reference
-	 * TODO(thoh):
-	 *	Temporary solution to contain the changes.
-	 *	To be transitioned to ll_conn. */
-	struct ull_tx_q *tx_q;
+	struct ull_tx_q tx_q;
 
-	/* Local Request */
 	struct {
-		sys_slist_t pend_proc_list;
-		u8_t state;
-	} local;
+		/* Local Request */
+		struct {
+			sys_slist_t pend_proc_list;
+			u8_t state;
+		} local;
 
-	/* Remote Request */
-	struct {
-		sys_slist_t pend_proc_list;
-		u8_t state;
-	} remote;
+		/* Remote Request */
+		struct {
+			sys_slist_t pend_proc_list;
+			u8_t state;
+			u8_t collision;
+			u8_t incompat;
+			u8_t reject_opcode;
+		} remote;
 
-	/* Version Exchange Procedure State */
-	struct {
-		u8_t sent;
-		u8_t valid;
-		struct pdu_data_llctrl_version_ind cached;
-	} vex;
+		/* Version Exchange Procedure State */
+		struct {
+			u8_t sent;
+			u8_t valid;
+			struct pdu_data_llctrl_version_ind cached;
+		} vex;
+	} llcp;
 
-	/* Encryption State (temporary) */
-	u8_t enc_tx;
-	u8_t enc_rx;
+	struct mocked_lll_conn {
+		/* Encryption State (temporary) */
+		u8_t enc_tx;
+		u8_t enc_rx;
+
+		/**/
+		 u16_t latency_prepare;
+		 u16_t latency_event;
+		 u16_t event_counter;
+
+		 u8_t role;
+	} lll;
 };
 
 enum {
@@ -94,3 +106,7 @@ void ull_cp_ltk_req_reply(struct ull_cp_conn *conn);
  */
 void ull_cp_ltk_req_neq_reply(struct ull_cp_conn *conn);
 
+/**
+ * @brief Initiate a PHY Update Procedure.
+ */
+u8_t ull_cp_phy_update(struct ull_cp_conn *conn);
