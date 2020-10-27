@@ -89,24 +89,6 @@
 #define LL_FEAT_BIT_SMI_TX 0
 #endif /* !CONFIG_BT_CTLR_SMI_TX */
 
-#if defined(CONFIG_BT_CTLR_SMI_RX)
-#define LL_FEAT_BIT_SMI_RX BIT64(BT_LE_FEAT_BIT_SMI_RX)
-#else /* !CONFIG_BT_CTLR_SMI_RX */
-#define LL_FEAT_BIT_SMI_RX 0
-#endif /* !CONFIG_BT_CTLR_SMI_RX */
-
-#if defined(CONFIG_BT_CTLR_PHY_CODED)
-#define LL_FEAT_BIT_PHY_CODED BIT64(BT_LE_FEAT_BIT_PHY_CODED)
-#else /* !CONFIG_BT_CTLR_PHY_CODED */
-#define LL_FEAT_BIT_PHY_CODED 0
-#endif /* !CONFIG_BT_CTLR_PHY_CODED */
-
-#if defined(CONFIG_BT_CTLR_ADV_EXT)
-#define LL_FEAT_BIT_EXT_ADV BIT64(BT_LE_FEAT_BIT_EXT_ADV)
-#else /* !CONFIG_BT_CTLR_ADV_EXT */
-#define LL_FEAT_BIT_EXT_ADV 0
-#endif /* !CONFIG_BT_CTLR_ADV_EXT */
-
 /*
  * LL_FEAT_BIT_MASK_VALID is defined as per
  * Core Spec V5.2 Volume 6, Part B, chapter 4.6

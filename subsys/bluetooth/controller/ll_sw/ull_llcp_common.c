@@ -30,7 +30,7 @@
 #include "ull_llcp_internal.h"
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
-#define LOG_MODULE_NAME bt_ctlr_ull_llcp
+#define LOG_MODULE_NAME bt_ctlr_ull_llcp_common
 #include "common/log.h"
 #include <soc.h>
 #include "hal/debug.h"
@@ -275,6 +275,7 @@ static void lp_comm_send_req(struct ull_cp_conn *conn, struct proc_ctx *ctx, u8_
 				ctx->state = LP_COMMON_STATE_WAIT_RX;
 			}
 		} else {
+			ctx->response_opcode = PDU_DATA_LLCTRL_TYPE_VERSION_IND;
 			lp_comm_complete(conn, ctx, evt, param);
 		}
 		break;
