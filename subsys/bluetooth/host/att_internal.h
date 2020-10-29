@@ -10,8 +10,9 @@
 #define BT_ATT_DEFAULT_LE_MTU	23
 #define BT_ATT_TIMEOUT		K_SECONDS(30)
 
-#if BT_L2CAP_RX_MTU < CONFIG_BT_L2CAP_TX_MTU
-#define BT_ATT_MTU BT_L2CAP_RX_MTU
+/* ATT MTU must be equal for RX and TX, so select the smallest value */
+#if CONFIG_BT_L2CAP_RX_MTU < CONFIG_BT_L2CAP_TX_MTU
+#define BT_ATT_MTU CONFIG_BT_L2CAP_RX_MTU
 #else
 #define BT_ATT_MTU CONFIG_BT_L2CAP_TX_MTU
 #endif
@@ -138,7 +139,7 @@ struct bt_att_read_mult_req {
 	uint16_t handles[0];
 } __packed;
 
-/* Read Multiple Respose */
+/* Read Multiple Response */
 #define BT_ATT_OP_READ_MULT_RSP			0x0f
 struct bt_att_read_mult_rsp {
 	uint8_t  value[0];

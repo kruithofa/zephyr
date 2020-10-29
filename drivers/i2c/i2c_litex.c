@@ -26,10 +26,10 @@ struct i2c_litex_cfg {
 };
 
 #define GET_I2C_CFG(dev)						     \
-	((const struct i2c_litex_cfg *) dev->config_info)
+	((const struct i2c_litex_cfg *) dev->config)
 
 #define GET_I2C_BITBANG(dev)						     \
-	((struct i2c_bitbang *) dev->driver_data)
+	((struct i2c_bitbang *) dev->data)
 
 static inline void set_bit(volatile uint32_t *reg, uint32_t bit, uint32_t val)
 {
@@ -81,7 +81,7 @@ static const struct i2c_bitbang_io i2c_litex_bitbang_io = {
 	.get_sda = i2c_litex_bitbang_get_sda,
 };
 
-static int i2c_litex_init(struct device *dev)
+static int i2c_litex_init(const struct device *dev)
 {
 	const struct i2c_litex_cfg *config = GET_I2C_CFG(dev);
 	struct i2c_bitbang *bitbang = GET_I2C_BITBANG(dev);
@@ -92,15 +92,15 @@ static int i2c_litex_init(struct device *dev)
 	return 0;
 }
 
-static int i2c_litex_configure(struct device *dev, uint32_t dev_config)
+static int i2c_litex_configure(const struct device *dev, uint32_t dev_config)
 {
 	struct i2c_bitbang *bitbang = GET_I2C_BITBANG(dev);
 
 	return i2c_bitbang_configure(bitbang, dev_config);
 }
 
-static int i2c_litex_transfer(struct device *dev,  struct i2c_msg *msgs,
-		       uint8_t num_msgs, uint16_t addr)
+static int i2c_litex_transfer(const struct device *dev,  struct i2c_msg *msgs,
+			      uint8_t num_msgs, uint16_t addr)
 {
 	struct i2c_bitbang *bitbang = GET_I2C_BITBANG(dev);
 

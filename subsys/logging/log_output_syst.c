@@ -7,9 +7,9 @@
 #include <init.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <assert.h>
 #include <kernel.h>
 #include <mipi_syst.h>
+#include <sys/__assert.h>
 #include <logging/log.h>
 #include <logging/log_ctrl.h>
 #include <logging/log_output.h>
@@ -370,7 +370,7 @@ void log_output_hexdump_syst_process(const struct log_output *log_output,
 	MIPI_SYST_WRITE(&log_syst_handle, severity, 0x1A, data, length);
 }
 
-static int syst_init(struct device *arg)
+static int syst_init(const struct device *arg)
 {
 	ARG_UNUSED(arg);
 

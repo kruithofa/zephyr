@@ -16,6 +16,7 @@
 #include <init.h>
 
 #include <drivers/clock_control/stm32_clock_control.h>
+#include <pinmux/stm32/pinmux_stm32.h>
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(pwm_stm32, CONFIG_PWM_LOG_LEVEL);
@@ -34,6 +35,10 @@ struct pwm_stm32_config {
 	uint32_t prescaler;
 	/** Clock configuration. */
 	struct stm32_pclken pclken;
+	/** pinctrl configurations. */
+	const struct soc_gpio_pinctrl *pinctrl;
+	/** Number of pinctrl configurations. */
+	size_t pinctrl_len;
 };
 
 /** Series F3, F7, G0, G4, H7, L4, MP1 and WB have up to 6 channels, others up
@@ -75,16 +80,6 @@ static void (*const set_timer_compare[TIMER_MAX_CH])(TIM_TypeDef *,
 #endif
 };
 
-static inline struct pwm_stm32_data *to_data(struct device *dev)
-{
-	return dev->driver_data;
-}
-
-static inline const struct pwm_stm32_config *to_config(struct device *dev)
-{
-	return dev->config_info;
-}
-
 /**
  * Obtain LL polarity from PWM flags.
  *
@@ -112,7 +107,7 @@ static uint32_t get_polarity(pwm_flags_t flags)
 static int get_tim_clk(const struct stm32_pclken *pclken, uint32_t *tim_clk)
 {
 	int r;
-	struct device *clk;
+	const struct device *clk;
 	uint32_t bus_clk, apb_psc;
 
 	clk = device_get_binding(STM32_CLOCK_CONTROL_NAME);
@@ -183,11 +178,11 @@ static int get_tim_clk(const struct stm32_pclken *pclken, uint32_t *tim_clk)
 	return 0;
 }
 
-static int pwm_stm32_pin_set(struct device *dev, uint32_t pwm,
+static int pwm_stm32_pin_set(const struct device *dev, uint32_t pwm,
 			     uint32_t period_cycles, uint32_t pulse_cycles,
 			     pwm_flags_t flags)
 {
-	const struct pwm_stm32_config *cfg = to_config(dev);
+	const struct pwm_stm32_config *cfg = dev->config;
 
 	uint32_t channel;
 
@@ -244,11 +239,12 @@ static int pwm_stm32_pin_set(struct device *dev, uint32_t pwm,
 	return 0;
 }
 
-static int pwm_stm32_get_cycles_per_sec(struct device *dev, uint32_t pwm,
+static int pwm_stm32_get_cycles_per_sec(const struct device *dev,
+					uint32_t pwm,
 					uint64_t *cycles)
 {
-	struct pwm_stm32_data *data = to_data(dev);
-	const struct pwm_stm32_config *cfg = to_config(dev);
+	struct pwm_stm32_data *data = dev->data;
+	const struct pwm_stm32_config *cfg = dev->config;
 
 	*cycles = (uint64_t)(data->tim_clk / (cfg->prescaler + 1));
 
@@ -260,13 +256,13 @@ static const struct pwm_driver_api pwm_stm32_driver_api = {
 	.get_cycles_per_sec = pwm_stm32_get_cycles_per_sec,
 };
 
-static int pwm_stm32_init(struct device *dev)
+static int pwm_stm32_init(const struct device *dev)
 {
-	struct pwm_stm32_data *data = to_data(dev);
-	const struct pwm_stm32_config *cfg = to_config(dev);
+	struct pwm_stm32_data *data = dev->data;
+	const struct pwm_stm32_config *cfg = dev->config;
 
 	int r;
-	struct device *clk;
+	const struct device *clk;
 	LL_TIM_InitTypeDef init;
 
 	/* enable clock and store its speed */
@@ -282,6 +278,15 @@ static int pwm_stm32_init(struct device *dev)
 	r = get_tim_clk(&cfg->pclken, &data->tim_clk);
 	if (r < 0) {
 		LOG_ERR("Could not obtain timer clock (%d)", r);
+		return r;
+	}
+
+	/* configure pinmux */
+	r = stm32_dt_pinctrl_configure(cfg->pinctrl,
+				       cfg->pinctrl_len,
+				       (uint32_t)cfg->timer);
+	if (r < 0) {
+		LOG_ERR("PWM pinctrl setup failed (%d)", r);
 		return r;
 	}
 
@@ -310,18 +315,23 @@ static int pwm_stm32_init(struct device *dev)
 
 #define DT_INST_CLK(index, inst)                                               \
 	{                                                                      \
-		.bus = DT_CLOCKS_CELL(DT_INST(index, st_stm32_timers), bus),   \
-		.enr = DT_CLOCKS_CELL(DT_INST(index, st_stm32_timers), bits)   \
+		.bus = DT_CLOCKS_CELL(DT_PARENT(DT_DRV_INST(index)), bus),     \
+		.enr = DT_CLOCKS_CELL(DT_PARENT(DT_DRV_INST(index)), bits)     \
 	}
 
 #define PWM_DEVICE_INIT(index)                                                 \
 	static struct pwm_stm32_data pwm_stm32_data_##index;                   \
 									       \
+	static const struct soc_gpio_pinctrl pwm_pins_##index[] =	       \
+		ST_STM32_DT_INST_PINCTRL(index, 0);			       \
+									       \
 	static const struct pwm_stm32_config pwm_stm32_config_##index = {      \
 		.timer = (TIM_TypeDef *)DT_REG_ADDR(                           \
-			DT_INST(index, st_stm32_timers)),                      \
+			DT_PARENT(DT_DRV_INST(index))),                        \
 		.prescaler = DT_INST_PROP(index, st_prescaler),                \
-		.pclken = DT_INST_CLK(index, timer)                            \
+		.pclken = DT_INST_CLK(index, timer),                           \
+		.pinctrl = pwm_pins_##index,                                   \
+		.pinctrl_len = ARRAY_SIZE(pwm_pins_##index),                   \
 	};                                                                     \
 									       \
 	DEVICE_AND_API_INIT(pwm_stm32_##index, DT_INST_LABEL(index),           \

@@ -43,7 +43,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include "nrf_802154.h"
 
 struct nrf5_802154_config {
-	void (*irq_config_func)(struct device *dev);
+	void (*irq_config_func)(const struct device *dev);
 };
 
 static struct nrf5_802154_data nrf5_data;
@@ -55,20 +55,36 @@ static struct nrf5_802154_data nrf5_data;
 
 /* Convenience defines for RADIO */
 #define NRF5_802154_DATA(dev) \
-	((struct nrf5_802154_data * const)(dev)->driver_data)
+	((struct nrf5_802154_data * const)(dev)->data)
 
 #define NRF5_802154_CFG(dev) \
-	((const struct nrf5_802154_config * const)(dev)->config_info)
+	((const struct nrf5_802154_config * const)(dev)->config)
+
+#if CONFIG_IEEE802154_VENDOR_OUI_ENABLE
+#define IEEE802154_NRF5_VENDOR_OUI CONFIG_IEEE802154_VENDOR_OUI
+#else
+#define IEEE802154_NRF5_VENDOR_OUI (uint32_t)0xF4CE36
+#endif
 
 static void nrf5_get_eui64(uint8_t *mac)
 {
-	memcpy(mac, (const uint32_t *)&NRF_FICR->DEVICEID, 8);
+	uint64_t factoryAddress;
+	uint32_t index = 0;
+
+	/* Set the MAC Address Block Larger (MA-L) formerly called OUI. */
+	mac[index++] = (IEEE802154_NRF5_VENDOR_OUI >> 16) & 0xff;
+	mac[index++] = (IEEE802154_NRF5_VENDOR_OUI >> 8) & 0xff;
+	mac[index++] = IEEE802154_NRF5_VENDOR_OUI & 0xff;
+
+	/* Use device identifier assigned during the production. */
+	factoryAddress = (uint64_t)NRF_FICR->DEVICEID[0] << 32;
+	factoryAddress |= NRF_FICR->DEVICEID[1];
+	memcpy(mac + index, &factoryAddress, sizeof(factoryAddress) - index);
 }
 
 static void nrf5_rx_thread(void *arg1, void *arg2, void *arg3)
 {
-	struct device *dev = (struct device *)arg1;
-	struct nrf5_802154_data *nrf5_radio = NRF5_802154_DATA(dev);
+	struct nrf5_802154_data *nrf5_radio = (struct nrf5_802154_data *)arg1;
 	struct net_pkt *pkt;
 	struct nrf5_802154_rx_frame *rx_frame;
 	uint8_t pkt_len;
@@ -155,14 +171,15 @@ drop:
 
 /* Radio device API */
 
-static enum ieee802154_hw_caps nrf5_get_capabilities(struct device *dev)
+static enum ieee802154_hw_caps nrf5_get_capabilities(const struct device *dev)
 {
 	return IEEE802154_HW_FCS | IEEE802154_HW_FILTER |
 	       IEEE802154_HW_CSMA | IEEE802154_HW_2_4_GHZ |
-	       IEEE802154_HW_TX_RX_ACK | IEEE802154_HW_ENERGY_SCAN;
+	       IEEE802154_HW_TX_RX_ACK | IEEE802154_HW_ENERGY_SCAN |
+	       IEEE802154_HW_SLEEP_TO_TX;
 }
 
-static int nrf5_cca(struct device *dev)
+static int nrf5_cca(const struct device *dev)
 {
 	struct nrf5_802154_data *nrf5_radio = NRF5_802154_DATA(dev);
 
@@ -181,7 +198,7 @@ static int nrf5_cca(struct device *dev)
 	return nrf5_radio->channel_free ? 0 : -EBUSY;
 }
 
-static int nrf5_set_channel(struct device *dev, uint16_t channel)
+static int nrf5_set_channel(const struct device *dev, uint16_t channel)
 {
 	ARG_UNUSED(dev);
 
@@ -196,7 +213,7 @@ static int nrf5_set_channel(struct device *dev, uint16_t channel)
 	return 0;
 }
 
-static int nrf5_energy_scan_start(struct device *dev,
+static int nrf5_energy_scan_start(const struct device *dev,
 				  uint16_t duration,
 				  energy_scan_done_cb_t done_cb)
 {
@@ -218,7 +235,7 @@ static int nrf5_energy_scan_start(struct device *dev,
 	return err;
 }
 
-static int nrf5_set_pan_id(struct device *dev, uint16_t pan_id)
+static int nrf5_set_pan_id(const struct device *dev, uint16_t pan_id)
 {
 	uint8_t pan_id_le[2];
 
@@ -232,7 +249,7 @@ static int nrf5_set_pan_id(struct device *dev, uint16_t pan_id)
 	return 0;
 }
 
-static int nrf5_set_short_addr(struct device *dev, uint16_t short_addr)
+static int nrf5_set_short_addr(const struct device *dev, uint16_t short_addr)
 {
 	uint8_t short_addr_le[2];
 
@@ -246,7 +263,8 @@ static int nrf5_set_short_addr(struct device *dev, uint16_t short_addr)
 	return 0;
 }
 
-static int nrf5_set_ieee_addr(struct device *dev, const uint8_t *ieee_addr)
+static int nrf5_set_ieee_addr(const struct device *dev,
+			      const uint8_t *ieee_addr)
 {
 	ARG_UNUSED(dev);
 
@@ -259,7 +277,7 @@ static int nrf5_set_ieee_addr(struct device *dev, const uint8_t *ieee_addr)
 	return 0;
 }
 
-static int nrf5_filter(struct device *dev, bool set,
+static int nrf5_filter(const struct device *dev, bool set,
 		       enum ieee802154_filter_type type,
 		       const struct ieee802154_filter *filter)
 {
@@ -280,7 +298,7 @@ static int nrf5_filter(struct device *dev, bool set,
 	return -ENOTSUP;
 }
 
-static int nrf5_set_txpower(struct device *dev, int16_t dbm)
+static int nrf5_set_txpower(const struct device *dev, int16_t dbm)
 {
 	ARG_UNUSED(dev);
 
@@ -334,7 +352,7 @@ free_nrf_ack:
 	return err;
 }
 
-static void nrf5_tx_started(struct device *dev,
+static void nrf5_tx_started(const struct device *dev,
 			    struct net_pkt *pkt,
 			    struct net_buf *frag)
 {
@@ -346,7 +364,7 @@ static void nrf5_tx_started(struct device *dev,
 	}
 }
 
-static int nrf5_tx(struct device *dev,
+static int nrf5_tx(const struct device *dev,
 		   enum ieee802154_tx_mode mode,
 		   struct net_pkt *pkt,
 		   struct net_buf *frag)
@@ -396,20 +414,31 @@ static int nrf5_tx(struct device *dev,
 
 	LOG_DBG("Result: %d", nrf5_data.tx_result);
 
-	if (nrf5_radio->tx_result == NRF_802154_TX_ERROR_NONE) {
+	switch (nrf5_radio->tx_result) {
+	case NRF_802154_TX_ERROR_NONE:
 		if (nrf5_radio->ack_frame.psdu == NULL) {
 			/* No ACK was requested. */
 			return 0;
 		}
-
 		/* Handle ACK packet. */
 		return handle_ack(nrf5_radio);
+	case NRF_802154_TX_ERROR_NO_MEM:
+		return -ENOBUFS;
+	case NRF_802154_TX_ERROR_BUSY_CHANNEL:
+		return -EBUSY;
+	case NRF_802154_TX_ERROR_INVALID_ACK:
+	case NRF_802154_TX_ERROR_NO_ACK:
+		return -ENOMSG;
+	case NRF_802154_TX_ERROR_ABORTED:
+	case NRF_802154_TX_ERROR_TIMESLOT_DENIED:
+	case NRF_802154_TX_ERROR_TIMESLOT_ENDED:
+		return -EIO;
 	}
 
 	return -EIO;
 }
 
-static int nrf5_start(struct device *dev)
+static int nrf5_start(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
@@ -424,7 +453,7 @@ static int nrf5_start(struct device *dev)
 	return 0;
 }
 
-static int nrf5_stop(struct device *dev)
+static int nrf5_stop(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
@@ -447,7 +476,7 @@ static void nrf5_radio_irq(void *arg)
 }
 #endif
 
-static void nrf5_irq_config(struct device *dev)
+static void nrf5_irq_config(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
@@ -458,7 +487,7 @@ static void nrf5_irq_config(struct device *dev)
 #endif
 }
 
-static int nrf5_init(struct device *dev)
+static int nrf5_init(const struct device *dev)
 {
 	const struct nrf5_802154_config *nrf5_radio_cfg = NRF5_802154_CFG(dev);
 	struct nrf5_802154_data *nrf5_radio = NRF5_802154_DATA(dev);
@@ -473,7 +502,7 @@ static int nrf5_init(struct device *dev)
 
 	k_thread_create(&nrf5_radio->rx_thread, nrf5_radio->rx_stack,
 			CONFIG_IEEE802154_NRF5_RX_STACK_SIZE,
-			nrf5_rx_thread, dev, NULL, NULL,
+			nrf5_rx_thread, nrf5_radio, NULL, NULL,
 			K_PRIO_COOP(2), 0, K_NO_WAIT);
 
 	k_thread_name_set(&nrf5_radio->rx_thread, "nrf5_rx");
@@ -485,7 +514,7 @@ static int nrf5_init(struct device *dev)
 
 static void nrf5_iface_init(struct net_if *iface)
 {
-	struct device *dev = net_if_get_device(iface);
+	const struct device *dev = net_if_get_device(iface);
 	struct nrf5_802154_data *nrf5_radio = NRF5_802154_DATA(dev);
 
 	nrf5_get_eui64(nrf5_radio->mac);
@@ -497,7 +526,8 @@ static void nrf5_iface_init(struct net_if *iface)
 	ieee802154_init(iface);
 }
 
-static int nrf5_configure(struct device *dev, enum ieee802154_config_type type,
+static int nrf5_configure(const struct device *dev,
+			  enum ieee802154_config_type type,
 			  const struct ieee802154_config *config)
 {
 	ARG_UNUSED(dev);
@@ -600,7 +630,33 @@ void nrf_802154_received_timestamp_raw(uint8_t *data, int8_t power, uint8_t lqi,
 
 void nrf_802154_receive_failed(nrf_802154_rx_error_t error)
 {
+	enum ieee802154_rx_fail_reason reason;
+
+	switch (error) {
+	case NRF_802154_RX_ERROR_INVALID_FRAME:
+	case NRF_802154_RX_ERROR_DELAYED_TIMEOUT:
+		reason = IEEE802154_RX_FAIL_NOT_RECEIVED;
+		break;
+
+	case NRF_802154_RX_ERROR_INVALID_FCS:
+		reason = IEEE802154_RX_FAIL_INVALID_FCS;
+		break;
+
+	case NRF_802154_RX_ERROR_INVALID_DEST_ADDR:
+		reason = IEEE802154_RX_FAIL_ADDR_FILTERED;
+		break;
+
+	default:
+		reason = IEEE802154_RX_FAIL_OTHER;
+		break;
+	}
+
 	nrf5_data.last_frame_ack_fpb = false;
+	if (nrf5_data.event_handler) {
+		nrf5_data.event_handler(net_if_get_device(nrf5_data.iface),
+					IEEE802154_EVENT_RX_FAILED,
+					(void *)&reason);
+	}
 }
 
 void nrf_802154_tx_ack_started(const uint8_t *data)

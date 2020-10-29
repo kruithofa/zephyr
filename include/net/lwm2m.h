@@ -50,13 +50,18 @@
  * http://www.openmobilealliance.org/wp/OMNA/LwM2M/LwM2MRegistry.html
  */
 
-#define IPSO_OBJECT_TEMP_SENSOR_ID			3303
-#define IPSO_OBJECT_LIGHT_CONTROL_ID			3311
-#define IPSO_OBJECT_ACCELEROMETER_ID			3313
-#define IPSO_OBJECT_BUZZER_ID				3338
-#define IPSO_OBJECT_TIMER_ID				3340
-#define IPSO_OBJECT_ONOFF_SWITCH_ID			3342
-#define IPSO_OBJECT_PUSH_BUTTON_ID			3347
+/* clang-format off */
+#define IPSO_OBJECT_GENERIC_SENSOR_ID       3300
+#define IPSO_OBJECT_TEMP_SENSOR_ID          3303
+#define IPSO_OBJECT_HUMIDITY_SENSOR_ID      3304
+#define IPSO_OBJECT_LIGHT_CONTROL_ID        3311
+#define IPSO_OBJECT_ACCELEROMETER_ID        3313
+#define IPSO_OBJECT_PRESSURE_ID             3323
+#define IPSO_OBJECT_BUZZER_ID               3338
+#define IPSO_OBJECT_TIMER_ID                3340
+#define IPSO_OBJECT_ONOFF_SWITCH_ID         3342
+#define IPSO_OBJECT_PUSH_BUTTON_ID          3347
+/* clang-format on */
 
 /**
  * @brief LwM2M context structure to maintain information for a single
@@ -92,6 +97,9 @@ struct lwm2m_ctx {
 
 	/** Current index of Security Object used for server credentials */
 	int sec_obj_inst;
+
+	/** Current index of Server Object used in this context. */
+	int srv_obj_inst;
 
 	/** Flag to enable BOOTSTRAP interface.  See Section 5.2
 	 *  "Bootstrap Interface" of LwM2M Technical Specification 1.0.2
@@ -131,7 +139,8 @@ struct lwm2m_ctx {
  * @return Callback returns a pointer to the data buffer or NULL for failure.
  */
 typedef void *(*lwm2m_engine_get_data_cb_t)(uint16_t obj_inst_id,
-					    uint16_t res_id, uint16_t res_inst_id,
+					    uint16_t res_id,
+					    uint16_t res_inst_id,
 					    size_t *data_len);
 
 /**
@@ -781,8 +790,8 @@ int lwm2m_engine_set_res_data(char *pathstr, void *data_ptr, uint16_t data_len,
  *
  * @return 0 for success or negative in case of error.
  */
-int lwm2m_engine_get_res_data(char *pathstr, void **data_ptr, uint16_t *data_len,
-			      uint8_t *data_flags);
+int lwm2m_engine_get_res_data(char *pathstr, void **data_ptr,
+			      uint16_t *data_len, uint8_t *data_flags);
 
 /**
  * @brief Create a resource instance
@@ -841,6 +850,15 @@ enum lwm2m_rd_client_event {
 	LWM2M_RD_CLIENT_EVENT_QUEUE_MODE_RX_OFF,
 };
 
+/*
+ * LwM2M RD client flags, used to configure LwM2M session.
+ */
+
+/**
+ * @brief Run bootstrap procedure in current session.
+ */
+#define LWM2M_RD_CLIENT_FLAG_BOOTSTRAP BIT(0)
+
 /**
  * @brief Asynchronous RD client event callback
  *
@@ -862,12 +880,11 @@ typedef void (*lwm2m_ctx_event_cb_t)(struct lwm2m_ctx *ctx,
  *
  * @param[in] client_ctx LwM2M context
  * @param[in] ep_name Registered endpoint name
+ * @param[in] flags Flags used to configure current LwM2M session.
  * @param[in] event_cb Client event callback function
- *
- * @return 0 for success or negative in case of error.
  */
 void lwm2m_rd_client_start(struct lwm2m_ctx *client_ctx, const char *ep_name,
-			   lwm2m_ctx_event_cb_t event_cb);
+			   uint32_t flags, lwm2m_ctx_event_cb_t event_cb);
 
 /**
  * @brief Stop the LwM2M RD (De-register) Client
@@ -879,8 +896,6 @@ void lwm2m_rd_client_start(struct lwm2m_ctx *client_ctx, const char *ep_name,
  *
  * @param[in] client_ctx LwM2M context
  * @param[in] event_cb Client event callback function
- *
- * @return 0 for success or negative in case of error.
  */
 void lwm2m_rd_client_stop(struct lwm2m_ctx *client_ctx,
 			  lwm2m_ctx_event_cb_t event_cb);

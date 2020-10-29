@@ -51,9 +51,12 @@
 	#define RAMABLE_REGION RAM
 #endif
 
-#ifdef CONFIG_X86_MMU
-	#define MMU_PAGE_SIZE	KB(4)
-	#define MMU_PAGE_ALIGN	. = ALIGN(MMU_PAGE_SIZE);
+/* Used to align areas with separate memory permission characteristics
+ * so that the page permissions can be set in the MMU. Without this,
+ * the kernel is just one blob with the same RWX permissions on all RAM
+ */
+#ifdef CONFIG_SRAM_REGION_PERMISSIONS
+	#define MMU_PAGE_ALIGN	. = ALIGN(CONFIG_MMU_PAGE_SIZE);
 #else
 	#define MMU_PAGE_ALIGN
 #endif
@@ -81,10 +84,12 @@ SECTIONS
 
 	. = ALIGN(8);
 
+#ifdef CONFIG_XIP
 	_image_rom_start = PHYS_LOAD_ADDR;
-	_image_text_start = PHYS_LOAD_ADDR;
+#endif
 	SECTION_PROLOGUE(_TEXT_SECTION_NAME,,)
 	{
+	_image_text_start = .;
 
 /* Located in generated directory. This file is populated by calling
  * zephyr_linker_sources(ROM_START ...). This typically contains the vector
@@ -122,13 +127,6 @@ SECTIONS
 	*(".rodata.*")
 	*(.gnu.linkonce.r.*)
 
-#ifdef CONFIG_X86_MMU
-	. = ALIGN(4);
-	_mmu_region_list_start = .;
-	KEEP(*("._mmu_region.static.*"))
-	_mmu_region_list_end = .;
-#endif /* CONFIG_X86_MMU */
-
 #ifndef CONFIG_DYNAMIC_INTERRUPTS
 	. = ALIGN(8);
 	_idt_base_address = .;
@@ -159,9 +157,11 @@ SECTIONS
 
 	MMU_PAGE_ALIGN
 	/* ROM ends here, position counter will now be in RAM areas */
+#ifdef CONFIG_XIP
 	_image_rom_end = .;
 	_image_rom_size = _image_rom_end - _image_rom_start;
-	_image_rodata_end = _image_rom_end;
+#endif
+	_image_rodata_end = .;
 	_image_rodata_size = _image_rodata_end - _image_rodata_start;
 	GROUP_END(ROMABLE_REGION)
 	/*
@@ -224,24 +224,9 @@ SECTIONS
 
 	__bss_num_words	= (__bss_end - __bss_start) >> 2;
 
-	SECTION_PROLOGUE(_NOINIT_SECTION_NAME, (NOLOAD),)
-	{
-	/*
-	 * This section is used for non-initialized objects that
-	 * will not be cleared during the boot process.
-	 */
-	*(.noinit)
-	*(".noinit.*")
-	*(".kernel_noinit.*")
-
-/* Located in generated directory. This file is populated by the
- * zephyr_linker_sources() Cmake function.
- */
-#include <snippets-noinit.ld>
+#include <linker/common-noinit.ld>
 
 	MMU_PAGE_ALIGN
-
-	} GROUP_DATA_LINK_IN(RAMABLE_REGION, RAMABLE_REGION)
 
 	SECTION_DATA_PROLOGUE(_DATA_SECTION_NAME,,)
 	{
@@ -332,9 +317,11 @@ SECTIONS
 	__data_rom_start = LOADADDR(_DATA_SECTION_NAME);
 
 #include <linker/common-ram.ld>
-
-#include <linker/kobject.ld>
 #include <linker/cplusplus-ram.ld>
+#include <arch/x86/pagetables.ld>
+
+/* Must be last in RAM */
+#include <linker/kobject.ld>
 
 	MMU_PAGE_ALIGN
 	__data_ram_end = .;

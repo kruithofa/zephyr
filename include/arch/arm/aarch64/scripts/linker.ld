@@ -257,22 +257,7 @@ SECTIONS
         __bss_end = ALIGN(4);
     } GROUP_DATA_LINK_IN(RAMABLE_REGION, RAMABLE_REGION)
 
-    SECTION_PROLOGUE(_NOINIT_SECTION_NAME,(NOLOAD),)
-    {
-        /*
-         * This section is used for non-initialized objects that
-         * will not be cleared during the boot process.
-         */
-        *(.noinit)
-        *(".noinit.*")
-        *(".kernel_noinit.*")
-
-/* Located in generated directory. This file is populated by the
- * zephyr_linker_sources() Cmake function.
- */
-#include <snippets-noinit.ld>
-
-    } GROUP_LINK_IN(RAMABLE_REGION)
+#include <linker/common-noinit.ld>
 
     SECTION_DATA_PROLOGUE(_DATA_SECTION_NAME,,)
     {
@@ -326,29 +311,6 @@ SECTIONS
 
     /DISCARD/ : { *(.note.GNU-stack) }
 
-#if defined(CONFIG_ARM_FIRMWARE_HAS_SECURE_ENTRY_FUNCS)
-
-#if CONFIG_ARM_NSC_REGION_BASE_ADDRESS != 0
-    #define NSC_ALIGN . = ABSOLUTE(CONFIG_ARM_NSC_REGION_BASE_ADDRESS)
-#else
-    #define NSC_ALIGN . = ALIGN(4)
-#endif
-
-    #define NSC_ALIGN_END . = ALIGN(4)
-
-    SECTION_PROLOGUE(.gnu.sgstubs,,)
-    {
-        NSC_ALIGN;
-        __sg_start = .;
-        /* No input section necessary, since the Secure Entry Veneers are
-           automatically placed after the .gnu.sgstubs output section. */
-    } GROUP_LINK_IN(ROMABLE_REGION)
-    __sg_end = .;
-    __sg_size = __sg_end - __sg_start;
-    NSC_ALIGN_END;
-    __nsc_size = . - __sg_start;
-
-#endif /* CONFIG_ARM_FIRMWARE_HAS_SECURE_ENTRY_FUNCS */
 
     /* Must be last in romable region */
     SECTION_PROLOGUE(.last_section,(NOLOAD),)

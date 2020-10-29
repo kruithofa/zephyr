@@ -7,13 +7,47 @@
 
 #define LL_VERSION_NUMBER BT_HCI_VERSION_5_2
 
+#define LL_ADV_CMDS_ANY    0 /* Any advertising cmd/evt allowed */
+#define LL_ADV_CMDS_LEGACY 1 /* Only legacy advertising cmd/evt allowed */
+#define LL_ADV_CMDS_EXT    2 /* Only extended advertising cmd/evt allowed */
+
 int ll_init(struct k_sem *sem_rx);
 void ll_reset(void);
 
 uint8_t *ll_addr_get(uint8_t addr_type, uint8_t *p_bdaddr);
 uint8_t ll_addr_set(uint8_t addr_type, uint8_t const *const p_bdaddr);
 
+#if defined(CONFIG_BT_CTLR_HCI_ADV_HANDLE_MAPPING)
+uint8_t ll_adv_set_by_hci_handle_get(uint8_t hci_handle, uint8_t *handle);
+uint8_t ll_adv_set_by_hci_handle_get_or_new(uint8_t hci_handle,
+					    uint8_t *handle);
+#else
+static inline uint8_t ll_adv_set_by_hci_handle_get(uint8_t hci_handle,
+						   uint8_t *handle)
+{
+	*handle = hci_handle;
+	return 0;
+}
+
+static inline uint8_t ll_adv_set_by_hci_handle_get_or_new(uint8_t hci_handle,
+							  uint8_t *handle)
+{
+	*handle = hci_handle;
+	return 0;
+}
+#endif
+
 #if defined(CONFIG_BT_CTLR_ADV_EXT)
+#if defined(CONFIG_BT_HCI_RAW)
+int ll_adv_cmds_set(uint8_t adv_cmds);
+int ll_adv_cmds_is_ext(void);
+#else
+static inline int ll_adv_cmds_is_ext(void)
+{
+	return 1;
+}
+#endif /* CONFIG_BT_HCI_RAW */
+
 uint8_t ll_adv_params_set(uint8_t handle, uint16_t evt_prop, uint32_t interval,
 		       uint8_t adv_type, uint8_t own_addr_type,
 		       uint8_t direct_addr_type, uint8_t const *const direct_addr,
@@ -53,15 +87,44 @@ uint8_t ll_adv_enable(uint8_t handle, uint8_t enable,
 		   uint8_t at_anchor, uint32_t ticks_anchor, uint8_t retry,
 		   uint8_t scan_window, uint8_t scan_delay);
 #else /* !CONFIG_BT_HCI_MESH_EXT */
-uint8_t ll_adv_enable(uint8_t handle, uint8_t enable);
+uint8_t ll_adv_enable(uint8_t handle, uint8_t enable,
+		   uint16_t duration, uint8_t max_ext_adv_evts);
 #endif /* !CONFIG_BT_HCI_MESH_EXT */
 #else /* !CONFIG_BT_CTLR_ADV_EXT || !CONFIG_BT_HCI_MESH_EXT */
 uint8_t ll_adv_enable(uint8_t enable);
 #endif /* !CONFIG_BT_CTLR_ADV_EXT || !CONFIG_BT_HCI_MESH_EXT */
 
+uint8_t ll_big_create(uint8_t big_handle, uint8_t adv_handle, uint8_t num_bis,
+		      uint32_t sdu_interval, uint16_t max_sdu,
+		      uint16_t max_latency, uint8_t rtn, uint8_t phy,
+		      uint8_t packing, uint8_t framing, uint8_t encryption,
+		      uint8_t *bcode);
+uint8_t ll_big_test_create(uint8_t big_handle, uint8_t adv_handle,
+			   uint8_t num_bis, uint32_t sdu_interval,
+			   uint16_t iso_interval, uint8_t nse, uint16_t max_sdu,
+			   uint16_t max_pdu, uint8_t phy, uint8_t packing,
+			   uint8_t framing, uint8_t bn, uint8_t irc,
+			   uint8_t pto, uint8_t encryption, uint8_t *bcode);
+uint8_t ll_big_terminate(uint8_t big_handle, uint8_t reason);
+
 uint8_t ll_scan_params_set(uint8_t type, uint16_t interval, uint16_t window,
-			uint8_t own_addr_type, uint8_t filter_policy);
+		uint8_t own_addr_type, uint8_t filter_policy);
+#if defined(CONFIG_BT_CTLR_ADV_EXT)
+uint8_t ll_scan_enable(uint8_t enable, uint16_t duration, uint16_t period);
+uint8_t ll_sync_create(uint8_t options, uint8_t sid, uint8_t adv_addr_type,
+		       uint8_t *adv_addr, uint16_t skip,
+		       uint16_t sync_timeout, uint8_t sync_cte_type);
+uint8_t ll_sync_create_cancel(void **rx);
+uint8_t ll_sync_terminate(uint16_t handle);
+uint8_t ll_sync_recv_enable(uint16_t handle, uint8_t enable);
+uint8_t ll_big_sync_create(uint8_t big_handle, uint16_t sync_handle,
+			   uint8_t encryption, uint8_t *bcode, uint8_t mse,
+			   uint16_t sync_timeout, uint8_t num_bis,
+			   uint8_t *bis);
+uint8_t ll_big_sync_terminate(uint8_t big_handle);
+#else /* !CONFIG_BT_CTLR_ADV_EXT */
 uint8_t ll_scan_enable(uint8_t enable);
+#endif /* !CONFIG_BT_CTLR_ADV_EXT */
 
 uint8_t ll_wl_size_get(void);
 uint8_t ll_wl_clear(void);

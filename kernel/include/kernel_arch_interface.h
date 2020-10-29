@@ -58,20 +58,24 @@ void arch_busy_wait(uint32_t usec_to_wait);
  * be called with the true bounds of the available stack buffer within the
  * thread's stack object.
  *
+ * The provided stack pointer is guaranteed to be properly aligned with respect
+ * to the CPU and ABI requirements. There may be space reserved between the
+ * stack pointer and the bounds of the stack buffer for initial stack pointer
+ * randomization and thread-local storage.
+ *
+ * Fields in thread->base will be initialized when this is called.
+ *
  * @param thread Pointer to uninitialized struct k_thread
- * @param pStack Pointer to the stack space.
- * @param stackSize Stack size in bytes.
- * @param entry Thread entry function.
- * @param p1 1st entry point parameter.
- * @param p2 2nd entry point parameter.
- * @param p3 3rd entry point parameter.
- * @param prio Thread priority.
- * @param options Thread options.
+ * @param stack Pointer to the stack object
+ * @param stack_ptr Aligned initial stack pointer
+ * @param entry Thread entry function
+ * @param p1 1st entry point parameter
+ * @param p2 2nd entry point parameter
+ * @param p3 3rd entry point parameter
  */
-void arch_new_thread(struct k_thread *thread, k_thread_stack_t *pStack,
-		       size_t stackSize, k_thread_entry_t entry,
-		       void *p1, void *p2, void *p3,
-		       int prio, unsigned int options);
+void arch_new_thread(struct k_thread *thread, k_thread_stack_t *stack,
+		     char *stack_ptr, k_thread_entry_t entry,
+		     void *p1, void *p2, void *p3);
 
 #ifdef CONFIG_USE_SWITCH
 /**
@@ -155,14 +159,11 @@ arch_thread_return_value_set(struct k_thread *thread, unsigned int value);
  * in early boot context to "switch out" of isn't workable.
  *
  * @param main_thread main thread object
- * @param main_stack main thread's stack object
- * @param main_stack_size Size of the stack object's buffer
+ * @param stack_ptr Initial stack pointer
  * @param _main Entry point for application main function.
  */
-void arch_switch_to_main_thread(struct k_thread *main_thread,
-				  k_thread_stack_t *main_stack,
-				  size_t main_stack_size,
-				  k_thread_entry_t _main);
+void arch_switch_to_main_thread(struct k_thread *main_thread, char *stack_ptr,
+				k_thread_entry_t _main);
 #endif /* CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN */
 
 #if defined(CONFIG_FPU) && defined(CONFIG_FPU_SHARING)
@@ -243,7 +244,7 @@ static inline bool arch_is_in_isr(void);
  * This API is part of infrastructure still under development and may
  * change.
  *
- * @see k_mem_map()
+ * @see z_mem_map()
  *
  * @param dest Page-aligned Destination virtual address to map
  * @param addr Page-aligned Source physical address to map
@@ -295,6 +296,28 @@ static inline void arch_kernel_init(void);
 
 /** Do nothing and return. Yawn. */
 static inline void arch_nop(void);
+
+/** @} */
+
+/**
+ * @defgroup arch-coredump Architecture-specific core dump APIs
+ * @ingroup arch-interface
+ * @{
+ */
+
+/**
+ * @brief Architecture-specific handling during coredump
+ *
+ * This dumps architecture-specific information during coredump.
+ *
+ * @param esf Exception Stack Frame (arch-specific)
+ */
+void arch_coredump_info_dump(const z_arch_esf_t *esf);
+
+/**
+ * @brief Get the target code specified by the architecture.
+ */
+uint16_t arch_coredump_tgt_code_get(void);
 
 /** @} */
 

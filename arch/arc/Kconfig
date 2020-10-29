@@ -189,9 +189,6 @@ config FAULT_DUMP
 
 	  0: Off.
 
-config XIP
-	default y if !UART_NSIM
-
 config GEN_ISR_TABLES
 	default y
 
@@ -330,5 +327,11 @@ config ARC_EXCEPTION_DEBUG
 	  Print human-readable information about exception vectors, cause codes,
 	  and parameters, at a cost of code/data size for the human-readable
 	  strings.
+
+config ARC_CUSTOM_INIT
+	bool "Enable custom initialization code"
+	help
+	  This option enables custom initialization code as a supplement
+	  method of initialization to some corner cases on SoCs and boards.
 
 endmenu

@@ -279,6 +279,21 @@ static bool sc_supported;
 static const uint8_t *sc_public_key;
 static K_SEM_DEFINE(sc_local_pkey_ready, 0, 1);
 
+static bool le_sc_supported(void)
+{
+	/*
+	 * If controller based ECC is to be used it must support
+	 * "LE Read Local P-256 Public Key" and "LE Generate DH Key" commands.
+	 * Otherwise LE SC are not supported.
+	 */
+	if (IS_ENABLED(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)) {
+		return false;
+	}
+
+	return BT_CMD_TEST(bt_dev.supported_commands, 34, 1) &&
+	       BT_CMD_TEST(bt_dev.supported_commands, 34, 2);
+}
+
 static uint8_t get_io_capa(void)
 {
 	if (!bt_auth) {
@@ -1835,7 +1850,8 @@ static void smp_pairing_complete(struct bt_smp *smp, uint8_t status)
 		}
 
 		if (!atomic_test_bit(smp->flags, SMP_FLAG_KEYS_DISTR)) {
-			bt_conn_security_changed(smp->chan.chan.conn, auth_err);
+			bt_conn_security_changed(smp->chan.chan.conn, status,
+						 auth_err);
 		}
 
 		if (bt_auth && bt_auth->pairing_failed) {
@@ -2778,9 +2794,8 @@ bool bt_smp_request_ltk(struct bt_conn *conn, uint64_t rand, uint16_t ediv, uint
 		/* Notify higher level that security failed if security was
 		 * initiated by slave.
 		 */
-		bt_conn_security_changed(smp->chan.chan.conn,
+		bt_conn_security_changed(conn, BT_HCI_ERR_PIN_OR_KEY_MISSING,
 					 BT_SECURITY_ERR_PIN_OR_KEY_MISSING);
-
 	}
 
 	smp_reset(smp);
@@ -3859,6 +3874,11 @@ static uint8_t smp_security_request(struct bt_smp *smp, struct net_buf *buf)
 		auth = req->auth_req & BT_SMP_AUTH_MASK_SC;
 	} else {
 		auth = req->auth_req & BT_SMP_AUTH_MASK;
+	}
+
+	if (IS_ENABLED(CONFIG_BT_SMP_SC_PAIR_ONLY) &&
+	    !(auth & BT_SMP_AUTH_SC)) {
+		return BT_SMP_ERR_AUTH_REQUIREMENTS;
 	}
 
 	if (IS_ENABLED(CONFIG_BT_BONDING_REQUIRED) &&
@@ -5110,10 +5130,13 @@ int bt_smp_le_oob_set_tk(struct bt_conn *conn, const uint8_t *tk)
 }
 #endif /* !defined(CONFIG_BT_SMP_SC_PAIR_ONLY) */
 
-#if !defined(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)
 int bt_smp_le_oob_generate_sc_data(struct bt_le_oob_sc_data *le_sc_oob)
 {
 	int err;
+
+	if (!le_sc_supported()) {
+		return -ENOTSUP;
+	}
 
 	if (!sc_public_key) {
 		err = k_sem_take(&sc_local_pkey_ready, K_FOREVER);
@@ -5144,7 +5167,6 @@ int bt_smp_le_oob_generate_sc_data(struct bt_le_oob_sc_data *le_sc_oob)
 
 	return 0;
 }
-#endif /* !defined(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY) */
 
 #if !defined(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)
 static bool le_sc_oob_data_check(struct bt_smp *smp, bool oobd_local_present,
@@ -5511,21 +5533,6 @@ static int bt_smp_accept(struct bt_conn *conn, struct bt_l2cap_chan **chan)
 	BT_ERR("No available SMP context for conn %p", conn);
 
 	return -ENOMEM;
-}
-
-static bool le_sc_supported(void)
-{
-	/*
-	 * If controller based ECC is to be used it must support
-	 * "LE Read Local P-256 Public Key" and "LE Generate DH Key" commands.
-	 * Otherwise LE SC are not supported.
-	 */
-	if (IS_ENABLED(CONFIG_BT_SMP_OOB_LEGACY_PAIR_ONLY)) {
-		return false;
-	}
-
-	return BT_CMD_TEST(bt_dev.supported_commands, 34, 1) &&
-	       BT_CMD_TEST(bt_dev.supported_commands, 34, 2);
 }
 
 BT_L2CAP_CHANNEL_DEFINE(smp_fixed_chan, BT_L2CAP_CID_SMP, bt_smp_accept, NULL);

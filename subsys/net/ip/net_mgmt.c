@@ -36,7 +36,7 @@ struct mgmt_event_wait {
 static K_SEM_DEFINE(network_event, 0, UINT_MAX);
 static K_SEM_DEFINE(net_mgmt_lock, 1, 1);
 
-K_THREAD_STACK_DEFINE(mgmt_stack, CONFIG_NET_MGMT_EVENT_STACK_SIZE);
+K_KERNEL_STACK_DEFINE(mgmt_stack, CONFIG_NET_MGMT_EVENT_STACK_SIZE);
 static struct k_thread mgmt_thread_data;
 static struct mgmt_event_entry events[CONFIG_NET_MGMT_EVENT_QUEUE_SIZE];
 static uint32_t global_event_mask;
@@ -45,7 +45,7 @@ static int16_t in_event;
 static int16_t out_event;
 
 static inline void mgmt_push_event(uint32_t mgmt_event, struct net_if *iface,
-				   void *info, size_t length)
+				   const void *info, size_t length)
 {
 	int16_t i_idx;
 
@@ -335,7 +335,7 @@ void net_mgmt_del_event_callback(struct net_mgmt_event_callback *cb)
 }
 
 void net_mgmt_event_notify_with_info(uint32_t mgmt_event, struct net_if *iface,
-				     void *info, size_t length)
+				     const void *info, size_t length)
 {
 	if (mgmt_is_event_handled(mgmt_event)) {
 		NET_DBG("Notifying Event layer %u code %u type %u",
@@ -387,7 +387,7 @@ void net_mgmt_event_init(void)
 			sizeof(struct mgmt_event_entry));
 
 	k_thread_create(&mgmt_thread_data, mgmt_stack,
-			K_THREAD_STACK_SIZEOF(mgmt_stack),
+			K_KERNEL_STACK_SIZEOF(mgmt_stack),
 			(k_thread_entry_t)mgmt_thread, NULL, NULL, NULL,
 			K_PRIO_COOP(CONFIG_NET_MGMT_EVENT_THREAD_PRIO), 0,
 			K_NO_WAIT);

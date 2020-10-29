@@ -5,9 +5,8 @@
  */
 
 #define DT_DRV_COMPAT inventek_eswifi
-#define LOG_LEVEL CONFIG_WIFI_LOG_LEVEL
-#include <logging/log.h>
-LOG_MODULE_REGISTER(wifi_eswifi_bus_spi);
+#include "eswifi_log.h"
+LOG_MODULE_DECLARE(LOG_MODULE_NAME);
 
 #include <zephyr.h>
 #include <kernel.h>
@@ -20,12 +19,12 @@ LOG_MODULE_REGISTER(wifi_eswifi_bus_spi);
 #include "eswifi.h"
 
 #define ESWIFI_SPI_THREAD_STACK_SIZE 1024
-K_THREAD_STACK_MEMBER(eswifi_spi_poll_stack, ESWIFI_SPI_THREAD_STACK_SIZE);
+K_KERNEL_STACK_MEMBER(eswifi_spi_poll_stack, ESWIFI_SPI_THREAD_STACK_SIZE);
 
 #define SPI_READ_CHUNK_SIZE 32
 
 struct eswifi_spi_data {
-	struct device *spi_dev;
+	const struct device *spi_dev;
 	struct eswifi_gpio csn;
 	struct eswifi_gpio dr;
 	struct k_thread poll_thread;

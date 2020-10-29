@@ -97,13 +97,13 @@ static void prevent_false_prev_evt(void)
  */
 static void handle_next_tick_case(uint32_t t)
 {
-	set_comparator(t + 2);
+	set_comparator(t + 2U);
 	while (t != counter()) {
 		/* already expired, tick elapsed but event might not be
 		 * generated. Trigger interrupt.
 		 */
 		t = counter();
-		set_comparator(t + 2);
+		set_comparator(t + 2U);
 	}
 }
 
@@ -117,7 +117,7 @@ static void set_absolute_ticks(uint32_t abs_val)
 	uint32_t t = counter();
 
 	diff = counter_sub(abs_val, t);
-	if (diff == 1) {
+	if (diff == 1U) {
 		handle_next_tick_case(t);
 		return;
 	}
@@ -160,18 +160,9 @@ void timer0_nrf_isr(void *arg)
 	z_clock_announce(IS_ENABLED(CONFIG_TICKLESS_KERNEL) ? dticks : (dticks > 0));
 }
 
-int z_clock_driver_init(struct device *device)
+int z_clock_driver_init(const struct device *device)
 {
-	struct device *clock;
-
 	ARG_UNUSED(device);
-
-	clock = device_get_binding(DT_LABEL(DT_INST(0, nordic_nrf_clock)));
-	if (!clock) {
-		return -1;
-	}
-
-	clock_control_on(clock, CLOCK_CONTROL_NRF_SUBSYS_HF);
 
 	/* FIXME switch to 1 MHz once this is fixed in QEMU */
 	nrf_timer_frequency_set(TIMER, NRF_TIMER_FREQ_2MHz);

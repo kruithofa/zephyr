@@ -8,7 +8,10 @@ zephyr_library_sources_ifdef(CONFIG_BT_MESH
     adv.c
     beacon.c
     net.c
+    subnet.c
+    app_keys.c
     transport.c
+    rpl.c
     crypto.c
     access.c
     cfg_srv.c

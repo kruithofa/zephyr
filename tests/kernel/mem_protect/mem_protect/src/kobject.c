@@ -38,7 +38,7 @@ static void kobject_access_grant_user_part(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant(), k_thread_user_mode_enter()
  */
-void test_kobject_access_grant(void *p1, void *p2, void *p3)
+void test_kobject_access_grant(void)
 {
 	set_fault_valid(false);
 
@@ -74,7 +74,7 @@ static void syscall_invalid_kobject_user_part(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant()
  */
-void test_syscall_invalid_kobject(void *p1, void *p2, void *p3)
+void test_syscall_invalid_kobject(void)
 {
 	set_fault_valid(false);
 
@@ -105,7 +105,7 @@ static void thread_without_kobject_permission_user_part(void *p1, void *p2,
  *
  * @see k_thread_access_grant(), k_thread_user_mode_enter()
  */
-void test_thread_without_kobject_permission(void *p1, void *p2, void *p3)
+void test_thread_without_kobject_permission(void)
 {
 	set_fault_valid(false);
 
@@ -136,7 +136,7 @@ static void kobject_revoke_access_user_part(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant(), k_object_access_revoke()
  */
-void test_kobject_revoke_access(void *p1, void *p2, void *p3)
+void test_kobject_revoke_access(void)
 {
 	set_fault_valid(false);
 
@@ -186,7 +186,7 @@ static void kobject_grant_access_extra_entry(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant()
  */
-void test_kobject_grant_access_kobj(void *p1, void *p2, void *p3)
+void test_kobject_grant_access_kobj(void)
 {
 	set_fault_valid(false);
 
@@ -232,7 +232,7 @@ static void grant_access_kobj_invalid_child(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant()
  */
-void test_kobject_grant_access_kobj_invalid(void *p1, void *p2, void *p3)
+void test_kobject_grant_access_kobj_invalid(void)
 {
 	set_fault_valid(false);
 
@@ -266,7 +266,7 @@ static void release_from_user_child(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant(), k_object_release()
  */
-void test_kobject_release_from_user(void *p1, void *p2, void *p3)
+void test_kobject_release_from_user(void)
 {
 	set_fault_valid(false);
 
@@ -303,7 +303,7 @@ static void access_all_grant_child_take(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_kobject_access_all_grant(void *p1, void *p2, void *p3)
+void test_kobject_access_all_grant(void)
 {
 	set_fault_valid(false);
 
@@ -351,7 +351,7 @@ static void residual_permissions_child_fail(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant()
  */
-void test_thread_has_residual_permissions(void *p1, void *p2, void *p3)
+void test_thread_has_residual_permissions(void)
 {
 	set_fault_valid(false);
 
@@ -386,7 +386,7 @@ void test_thread_has_residual_permissions(void *p1, void *p2, void *p3)
  * @see k_object_access_grant(), k_object_access_revoke(),
  * z_object_find()
  */
-void test_kobject_access_grant_to_invalid_thread(void *p1, void *p2, void *p3)
+void test_kobject_access_grant_to_invalid_thread(void)
 {
 	static struct k_thread uninit_thread;
 
@@ -407,7 +407,7 @@ void test_kobject_access_grant_to_invalid_thread(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_kobject_access_invalid_kobject(void *p1, void *p2, void *p3)
+void test_kobject_access_invalid_kobject(void)
 {
 	set_fault_valid(true);
 
@@ -425,8 +425,7 @@ void test_kobject_access_invalid_kobject(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_access_kobject_without_init_access(void *p1,
-					     void *p2, void *p3)
+void test_access_kobject_without_init_access(void)
 {
 	set_fault_valid(true);
 
@@ -451,8 +450,7 @@ static void without_init_with_access_child(void *p1, void *p2, void *p3)
  *
  * @see k_thread_access_grant()
  */
-void test_access_kobject_without_init_with_access(void *p1,
-						  void *p2, void *p3)
+void test_access_kobject_without_init_with_access(void)
 {
 	set_fault_valid(false);
 
@@ -495,7 +493,7 @@ static void reinitialize_thread_kobj_child(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_kobject_reinitialize_thread_kobj(void *p1, void *p2, void *p3)
+void test_kobject_reinitialize_thread_kobj(void)
 {
 	set_fault_valid(false);
 
@@ -513,10 +511,12 @@ void test_kobject_reinitialize_thread_kobj(void *p1, void *p2, void *p3)
 /* object validation checks */
 static void new_thread_from_user_extra(void *p1, void *p2, void *p3)
 {
+	k_thread_abort(&extra_thread);
 }
 
 static void new_thread_from_user_child(void *p1, void *p2, void *p3)
 {
+	set_fault_valid(false);
 	k_thread_create(&extra_thread,
 			extra_stack,
 			KOBJECT_STACK_SIZE,
@@ -526,12 +526,20 @@ static void new_thread_from_user_child(void *p1, void *p2, void *p3)
 
 	k_thread_join(&child_thread, K_FOREVER);
 }
+
 /**
- * @brief Test thread create from a user thread
+ * @brief Test thread create from a user thread and check permissions
+ *
+ * @details
+ * - Test user thread can create new thread.
+ * - Verify that given thread and thread stack permissions to the user thread,
+ *   allow to create new user thread.
+ * - Veify that new created user thread have access to its own thread object
+ *   by aborting itself.
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_create_new_thread_from_user(void *p1, void *p2, void *p3)
+void test_create_new_thread_from_user(void)
 {
 	set_fault_valid(false);
 
@@ -549,8 +557,57 @@ void test_create_new_thread_from_user(void *p1, void *p2, void *p3)
 	k_thread_join(&child_thread, K_FOREVER);
 }
 
-/****************************************************************************/
-/* object validation checks */
+/* Additional functions for test below
+ * User thread create with in-use stack objects
+ */
+static void new_thrd_from_user_with_in_use_stack(void *p1, void *p2, void *p3)
+{
+	zassert_unreachable("New user thread init with in-use stack obj");
+}
+
+static void new_user_thrd_child_with_in_use_stack(void *p1, void *p2, void *p3)
+{
+	set_fault_valid(true);
+
+	k_thread_create(&extra_thread,
+			child_stack,
+			KOBJECT_STACK_SIZE,
+			new_thrd_from_user_with_in_use_stack,
+			NULL, NULL, NULL,
+			0, K_USER, K_NO_WAIT);
+
+	k_thread_join(&child_thread, K_FOREVER);
+}
+
+/**
+ * @brief Test create new user thread from a user thread with in-use stack obj
+ *
+ * @details The kernel must prevent new user threads to use initiliazed (in-use)
+ * stack objects. In that case extra_thread is going to be create with in-use
+ * stack object child_stack. That will generate error, showing that kernel
+ * memory protection is working correctly.
+ *
+ * @ingroup kernel_memprotect_tests
+ */
+void test_new_user_thread_with_in_use_stack_obj(void)
+{
+	set_fault_valid(false);
+
+	k_thread_access_grant(&child_thread,
+			      &extra_thread,
+			      &extra_stack,
+			      &child_stack);
+
+	k_thread_create(&child_thread,
+			child_stack,
+			KOBJECT_STACK_SIZE,
+			new_user_thrd_child_with_in_use_stack,
+			NULL, NULL, NULL,
+			0, K_INHERIT_PERMS | K_USER, K_NO_WAIT);
+
+	k_thread_join(&child_thread, K_FOREVER);
+}
+
 static void from_user_no_access_stack_extra_entry(void *p1, void *p2, void *p3)
 {
 	zassert_unreachable("k_object validation failure in k thread create");
@@ -576,8 +633,7 @@ static void from_user_no_access_stack_child_entry(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_create_new_thread_from_user_no_access_stack(void *p1,
-						      void *p2, void *p3)
+void test_create_new_thread_from_user_no_access_stack(void)
 {
 	set_fault_valid(false);
 
@@ -621,8 +677,7 @@ static void from_user_invalid_stacksize_child(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_create_new_thread_from_user_invalid_stacksize(void *p1,
-							void *p2, void *p3)
+void test_create_new_thread_from_user_invalid_stacksize(void)
 {
 	set_fault_valid(false);
 
@@ -639,8 +694,7 @@ void test_create_new_thread_from_user_invalid_stacksize(void *p1,
 	k_thread_join(&child_thread, K_FOREVER);
 }
 #else
-void test_create_new_thread_from_user_invalid_stacksize(void *p1,
-							void *p2, void *p3)
+void test_create_new_thread_from_user_invalid_stacksize(void)
 {
 	ztest_test_skip();
 }
@@ -677,8 +731,7 @@ static void user_huge_stacksize_child(void *p1, void *p2, void *p3)
  * @ingroup kernel_memprotect_tests
  */
 
-void test_create_new_thread_from_user_huge_stacksize(void *p1,
-						     void *p2, void *p3)
+void test_create_new_thread_from_user_huge_stacksize(void)
 {
 	set_fault_valid(false);
 
@@ -696,8 +749,7 @@ void test_create_new_thread_from_user_huge_stacksize(void *p1,
 	k_thread_join(&child_thread, K_FOREVER);
 }
 #else
-void test_create_new_thread_from_user_huge_stacksize(void *p1,
-						     void *p2, void *p3)
+void test_create_new_thread_from_user_huge_stacksize(void)
 {
 	ztest_test_skip();
 }
@@ -733,7 +785,7 @@ static void supervisor_from_user_child(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_create_new_supervisor_thread_from_user(void *p1, void *p2, void *p3)
+void test_create_new_supervisor_thread_from_user(void)
 {
 	set_fault_valid(false);
 
@@ -777,7 +829,7 @@ static void essential_thread_from_user_child(void *p1, void *p2, void *p3)
  *
  * @ingroup kernel_memprotect_tests
  */
-void test_create_new_essential_thread_from_user(void *p1, void *p2, void *p3)
+void test_create_new_essential_thread_from_user(void)
 {
 	set_fault_valid(false);
 
@@ -823,7 +875,7 @@ static void higher_prio_from_user_child(void *p1, void *p2, void *p3)
  * @ingroup kernel_memprotect_tests
  */
 
-void test_create_new_higher_prio_thread_from_user(void *p1, void *p2, void *p3)
+void test_create_new_higher_prio_thread_from_user(void)
 {
 	set_fault_valid(false);
 
@@ -870,7 +922,7 @@ static void invalid_prio_from_user_child(void *p1, void *p2, void *p3)
  * @ingroup kernel_memprotect_tests
  */
 
-void test_create_new_invalid_prio_thread_from_user(void *p1, void *p2, void *p3)
+void test_create_new_invalid_prio_thread_from_user(void)
 {
 	set_fault_valid(false);
 
@@ -886,4 +938,59 @@ void test_create_new_invalid_prio_thread_from_user(void *p1, void *p2, void *p3)
 			0, K_USER, K_NO_WAIT);
 
 	k_thread_join(&child_thread, K_FOREVER);
+}
+
+/* Function to init thread's stack objects */
+static void thread_stack_init_objects(void *p1, void *p2, void *p3)
+{
+	int ret;
+	struct z_object *ko;
+
+	/* check that thread is initialized when running */
+	ko = z_object_find(&child_thread);
+	ret = z_object_validate(ko, K_OBJ_ANY, _OBJ_INIT_TRUE);
+	zassert_equal(ret, _OBJ_INIT_TRUE, NULL);
+
+	/* check that stack is initialized when running */
+	ko = z_object_find(child_stack);
+	ret = z_object_validate(ko, K_OBJ_ANY, _OBJ_INIT_TRUE);
+	zassert_equal(ret, _OBJ_INIT_TRUE, NULL);
+}
+
+/**
+ * @brief Test when thread exits, kernel marks stack objects uninitialized
+ *
+ * @details When thread exits, the kernel upon thread exit, should mark
+ * the exiting thread and thread stack object as uninitialized
+ *
+ * @ingroup kernel_memprotect_tests
+ */
+void test_mark_thread_exit_uninitialized(void)
+{
+	set_fault_valid(false);
+
+	int ret;
+	struct z_object *ko;
+
+	k_thread_access_grant(&child_thread,
+			      &child_stack);
+
+	k_thread_create(&child_thread,
+			child_stack,
+			KOBJECT_STACK_SIZE,
+			thread_stack_init_objects,
+			NULL, NULL, NULL,
+			0, K_INHERIT_PERMS, K_NO_WAIT);
+
+	k_thread_join(&child_thread, K_FOREVER);
+
+	/* check thread is uninitialized after its exit */
+	ko = z_object_find(&child_thread);
+	ret = z_object_validate(ko, K_OBJ_ANY, _OBJ_INIT_FALSE);
+	zassert_equal(ret, _OBJ_INIT_FALSE, NULL);
+
+	/* check stack is uninitialized after thread exit */
+	ko = z_object_find(child_stack);
+	ret = z_object_validate(ko, K_OBJ_ANY, _OBJ_INIT_FALSE);
+	zassert_equal(ret, _OBJ_INIT_FALSE, NULL);
 }

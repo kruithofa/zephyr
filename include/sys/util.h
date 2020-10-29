@@ -190,7 +190,7 @@ extern "C" {
  */
 static inline bool is_power_of_two(unsigned int x)
 {
-	return (x != 0U) && ((x & (x - 1)) == 0U);
+	return (x != 0U) && ((x & (x - 1U)) == 0U);
 }
 
 /**
@@ -280,7 +280,12 @@ uint8_t u8_to_dec(char *buf, uint8_t buflen, uint8_t value);
 #endif /* !_ASMLANGUAGE */
 
 /** @brief Number of bytes in @p x kibibytes */
+#ifdef _LINKER
+/* This is used in linker scripts so need to avoid type casting there */
 #define KB(x) ((x) << 10)
+#else
+#define KB(x) (((size_t)x) << 10)
+#endif
 /** @brief Number of bytes in @p x mebibytes */
 #define MB(x) (KB(x) << 10)
 /** @brief Number of bytes in @p x gibibytes */
@@ -488,7 +493,7 @@ uint8_t u8_to_dec(char *buf, uint8_t buflen, uint8_t value);
  *
  * @param a macro to check for emptiness
  */
-#define IS_EMPTY(a) Z_IS_EMPTY_(a, true, false,)
+#define IS_EMPTY(a) Z_IS_EMPTY_(a, 1, 0,)
 
 /**
  * @brief Remove empty arguments from list.
@@ -538,6 +543,16 @@ uint8_t u8_to_dec(char *buf, uint8_t buflen, uint8_t value);
  * would not.
  */
 #define EMPTY
+
+/**
+ * @brief Macro that expands to its argument
+ *
+ * This is useful in macros like @c FOR_EACH() when there is no
+ * transformation required on the list elements.
+ *
+ * @param V any value
+ */
+#define IDENTITY(V) V
 
 /**
  * @brief Get nth argument from argument list.
@@ -653,6 +668,71 @@ uint8_t u8_to_dec(char *buf, uint8_t buflen, uint8_t value);
 	Z_FOR_EACH_IDX2(NUM_VA_ARGS_LESS_1(__VA_ARGS__, _), \
 			0, Z_FOR_EACH_SWALLOW_INDEX_FIXED_ARG, sep, \
 			F, 0, __VA_ARGS__)
+
+/**
+ * @brief Like FOR_EACH(), but with a terminator instead of a separator,
+ *        and drops empty elements from the argument list
+ *
+ * The @p sep argument to <tt>FOR_EACH(F, (sep), a, b)</tt> is a
+ * separator which is placed between calls to @p F, like this:
+ *
+ *     FOR_EACH(F, (sep), a, b) // F(a) sep F(b)
+ *                              //               ^^^ no sep here!
+ *
+ * By contrast, the @p term argument to <tt>FOR_EACH_NONEMPTY_TERM(F, (term),
+ * a, b)</tt> is added after each time @p F appears in the expansion:
+ *
+ *     FOR_EACH_NONEMPTY_TERM(F, (term), a, b) // F(a) term F(b) term
+ *                                             //                ^^^^
+ *
+ * Further, any empty elements are dropped:
+ *
+ *     FOR_EACH_NONEMPTY_TERM(F, (term), a, EMPTY, b) // F(a) term F(b) term
+ *
+ * This is more convenient in some cases, because FOR_EACH_NONEMPTY_TERM()
+ * expands to nothing when given an empty argument list, and it's
+ * often cumbersome to write a macro @p F that does the right thing
+ * even when given an empty argument.
+ *
+ * One example is when <tt>__VA_ARGS__</tt> may or may not be empty,
+ * and the results are embedded in a larger initializer:
+ *
+ *     #define SQUARE(x) ((x)*(x))
+ *
+ *     int my_array[] = {
+ *             FOR_EACH_NONEMPTY_TERM(SQUARE, (,), FOO(...))
+ *             FOR_EACH_NONEMPTY_TERM(SQUARE, (,), BAR(...))
+ *             FOR_EACH_NONEMPTY_TERM(SQUARE, (,), BAZ(...))
+ *     };
+ *
+ * This is more convenient than:
+ *
+ * 1. figuring out whether the @p FOO, @p BAR, and @p BAZ expansions
+ *    are empty and adding a comma manually (or not) between FOR_EACH()
+ *    calls
+ * 2. rewriting SQUARE so it reacts appropriately when "x" is empty
+ *    (which would be necessary if e.g. @p FOO expands to nothing)
+ *
+ * @param F Macro to invoke on each nonempty element of the variable
+ *          arguments
+ * @param term Terminator (e.g. comma or semicolon) placed after each
+ *             invocation of F. Must be in parentheses; this is required
+ *             to enable providing a comma as separator.
+ * @param ... Variable argument list. The macro @p F is invoked as
+ *            <tt>F(element)</tt> for each nonempty element in the list.
+ */
+#define FOR_EACH_NONEMPTY_TERM(F, term, ...)				\
+	COND_CODE_0(							\
+		/* are there zero non-empty arguments ? */		\
+		NUM_VA_ARGS_LESS_1(LIST_DROP_EMPTY(__VA_ARGS__, _)),	\
+		/* if so, expand to nothing */				\
+		(),							\
+		/* otherwise, expand to: */				\
+		(/* FOR_EACH() on nonempty elements, */		\
+			FOR_EACH(F, term, LIST_DROP_EMPTY(__VA_ARGS__))	\
+			/* plus a final terminator */			\
+			__DEBRACKET term				\
+		))
 
 /**
  * @brief Call macro @p F on each provided argument, with the argument's index

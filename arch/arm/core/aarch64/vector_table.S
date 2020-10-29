@@ -82,7 +82,12 @@ SECTION_SUBSEC_FUNC(exc_vector_table,_vector_table_section,_vector_table)
 
 	/* Current EL with SPx / IRQ */
 	.align 7
-	b	_isr_wrapper
+
+#ifdef CONFIG_GEN_SW_ISR_TABLE
+	b 	_isr_wrapper
+#else
+	b	z_irq_spurious
+#endif
 
 	/* Current EL with SPx / FIQ */
 	.align 7
@@ -90,7 +95,7 @@ SECTION_SUBSEC_FUNC(exc_vector_table,_vector_table_section,_vector_table)
 
 	/* Current EL with SPx / SError */
 	.align 7
-	z_arm64_enter_exc
+	z_arm64_enter_exc x0, x1, x2
 
 	mov	x1, sp
 	mov	x0, #0 /* K_ERR_CPU_EXCEPTION */

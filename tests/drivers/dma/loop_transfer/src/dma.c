@@ -26,19 +26,19 @@ static __aligned(16) char tx_data[64] __used
 static __aligned(16) char rx_data[TRANSFER_LOOPS][RX_BUFF_SIZE] __used
 	__attribute__((__section__(".nocache.dma")));
 #else
-/* pad to times of 8*/
-static const char tx_data[] =
+/* this src memory shall be in RAM to support usingas a DMA source pointer.*/
+static char tx_data[] =
 	"The quick brown fox jumps over the lazy dog ....";
 static __aligned(16) char rx_data[TRANSFER_LOOPS][RX_BUFF_SIZE] = { { 0 } };
 #endif
 
-#define DMA_DEVICE_NAME "DMA_0"
+#define DMA_DEVICE_NAME CONFIG_DMA_LOOP_TRANSFER_DRV_NAME
 
 volatile uint8_t transfer_count;
 static struct dma_config dma_cfg = {0};
 static struct dma_block_config dma_block_cfg = {0};
 
-static void test_transfer(struct device *dev, uint32_t id)
+static void test_transfer(const struct device *dev, uint32_t id)
 {
 	int ret;
 	transfer_count++;
@@ -59,12 +59,11 @@ static void test_error(void)
 	printk("DMA could not proceed, an error occurred\n");
 }
 
-static void dma_user_callback(void *arg, uint32_t id, int error_code)
+static void dma_user_callback(const struct device *dma_dev, void *arg,
+			      uint32_t id, int error_code)
 {
-	struct device *dev = (struct device *)arg;
-
 	if (error_code == 0) {
-		test_transfer(dev, id);
+		test_transfer(dma_dev, id);
 	} else {
 		test_error();
 	}
@@ -72,7 +71,7 @@ static void dma_user_callback(void *arg, uint32_t id, int error_code)
 
 void main(void)
 {
-	struct device *dma;
+	const struct device *dma;
 	static uint32_t chan_id;
 
 	printk("DMA memory to memory transfer started on %s\n",
@@ -97,7 +96,7 @@ void main(void)
 	dma_cfg.dest_data_size = 1U;
 	dma_cfg.source_burst_length = 1U;
 	dma_cfg.dest_burst_length = 1U;
-	dma_cfg.callback_arg = dma;
+	dma_cfg.user_data = NULL;
 	dma_cfg.dma_callback = dma_user_callback;
 	dma_cfg.block_count = 1U;
 	dma_cfg.head_block = &dma_block_cfg;
@@ -105,7 +104,7 @@ void main(void)
 	dma_cfg.dma_slot = CONFIG_DMA_MCUX_TEST_SLOT_START;
 #endif
 
-	chan_id = 0U;
+	chan_id = CONFIG_DMA_LOOP_TRANSFER_CHANNEL_NR;
 	transfer_count = 0;
 	printk("Starting the transfer and waiting for 1 second\n");
 	printk("TX data: %s\n", tx_data);

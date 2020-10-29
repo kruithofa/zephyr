@@ -24,7 +24,7 @@
 #define AT_RSP_DELIMITER_LEN 2
 
 struct eswifi_gpio {
-	struct device *dev;
+	const struct device *dev;
 	unsigned int pin;
 };
 
@@ -142,6 +142,12 @@ int __eswifi_bind(struct eswifi_dev *eswifi, struct eswifi_off_socket *socket,
 		  const struct sockaddr *addr, socklen_t addrlen);
 #if defined(CONFIG_NET_SOCKETS_OFFLOAD)
 int eswifi_socket_offload_init(struct eswifi_dev *leswifi);
+#endif
+
+#if defined(CONFIG_WIFI_ESWIFI_SHELL)
+void eswifi_shell_register(struct eswifi_dev *dev);
+#else
+#define eswifi_shell_register(dev)
 #endif
 
 #endif

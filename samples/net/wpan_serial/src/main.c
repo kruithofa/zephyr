@@ -50,11 +50,11 @@ static uint8_t slip_buf[1 + 2 * CONFIG_NET_BUF_DATA_SIZE];
 
 /* ieee802.15.4 device */
 static struct ieee802154_radio_api *radio_api;
-static struct device *ieee802154_dev;
+static const struct device *ieee802154_dev;
 uint8_t mac_addr[8];
 
 /* UART device */
-static struct device *uart_dev;
+static const struct device *uart_dev;
 
 /* SLIP state machine */
 static uint8_t slip_state = STATE_OK;
@@ -127,8 +127,10 @@ static int slip_process_byte(unsigned char c)
 	return 0;
 }
 
-static void interrupt_handler(struct device *dev)
+static void interrupt_handler(const struct device *dev, void *user_data)
 {
+	ARG_UNUSED(user_data);
+
 	while (uart_irq_update(dev) && uart_irq_is_pending(dev)) {
 		unsigned char byte;
 
@@ -428,7 +430,7 @@ static void init_tx_queue(void)
 /**
  * FIXME choose correct OUI, or add support in L2
  */
-static uint8_t *get_mac(struct device *dev)
+static uint8_t *get_mac(const struct device *dev)
 {
 	uint32_t *ptr = (uint32_t *)mac_addr;
 
@@ -454,7 +456,7 @@ static bool init_ieee802154(void)
 		return false;
 	}
 
-	radio_api = (struct ieee802154_radio_api *)ieee802154_dev->driver_api;
+	radio_api = (struct ieee802154_radio_api *)ieee802154_dev->api;
 
 	/**
 	 * Do actual initialization of the chip
@@ -514,7 +516,7 @@ int net_recv_data(struct net_if *iface, struct net_pkt *pkt)
 
 void main(void)
 {
-	struct device *dev;
+	const struct device *dev;
 	uint32_t baudrate, dtr = 0U;
 	int ret;
 

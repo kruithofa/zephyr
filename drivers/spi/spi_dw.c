@@ -53,10 +53,10 @@ static inline bool spi_dw_is_slave(struct spi_dw_data *spi)
 		spi_context_is_slave(&spi->ctx));
 }
 
-static void completed(struct device *dev, int error)
+static void completed(const struct device *dev, int error)
 {
-	const struct spi_dw_config *info = dev->config_info;
-	struct spi_dw_data *spi = dev->driver_data;
+	const struct spi_dw_config *info = dev->config;
+	struct spi_dw_data *spi = dev->data;
 
 	if (error) {
 		goto out;
@@ -85,10 +85,10 @@ out:
 	spi_context_complete(&spi->ctx, error);
 }
 
-static void push_data(struct device *dev)
+static void push_data(const struct device *dev)
 {
-	const struct spi_dw_config *info = dev->config_info;
-	struct spi_dw_data *spi = dev->driver_data;
+	const struct spi_dw_config *info = dev->config;
+	struct spi_dw_data *spi = dev->data;
 	uint32_t data = 0U;
 	uint32_t f_tx;
 
@@ -154,10 +154,10 @@ static void push_data(struct device *dev)
 	LOG_DBG("Pushed: %d", DBG_COUNTER_RESULT());
 }
 
-static void pull_data(struct device *dev)
+static void pull_data(const struct device *dev)
 {
-	const struct spi_dw_config *info = dev->config_info;
-	struct spi_dw_data *spi = dev->driver_data;
+	const struct spi_dw_config *info = dev->config;
+	struct spi_dw_data *spi = dev->data;
 
 	DBG_COUNTER_INIT();
 
@@ -329,15 +329,15 @@ static void spi_dw_update_txftlr(const struct spi_dw_config *info,
 	write_txftlr(reg_data, info->regs);
 }
 
-static int transceive(struct device *dev,
+static int transceive(const struct device *dev,
 		      const struct spi_config *config,
 		      const struct spi_buf_set *tx_bufs,
 		      const struct spi_buf_set *rx_bufs,
 		      bool asynchronous,
 		      struct k_poll_signal *signal)
 {
-	const struct spi_dw_config *info = dev->config_info;
-	struct spi_dw_data *spi = dev->driver_data;
+	const struct spi_dw_config *info = dev->config;
+	struct spi_dw_data *spi = dev->data;
 	uint32_t tmod = DW_SPI_CTRLR0_TMOD_TX_RX;
 	uint32_t reg_data;
 	int ret;
@@ -440,8 +440,8 @@ out:
 	return ret;
 }
 
-static int spi_dw_transceive(struct device *dev,
-		      const struct spi_config *config,
+static int spi_dw_transceive(const struct device *dev,
+			     const struct spi_config *config,
 			     const struct spi_buf_set *tx_bufs,
 			     const struct spi_buf_set *rx_bufs)
 {
@@ -451,7 +451,7 @@ static int spi_dw_transceive(struct device *dev,
 }
 
 #ifdef CONFIG_SPI_ASYNC
-static int spi_dw_transceive_async(struct device *dev,
+static int spi_dw_transceive_async(const struct device *dev,
 				   const struct spi_config *config,
 				   const struct spi_buf_set *tx_bufs,
 				   const struct spi_buf_set *rx_bufs,
@@ -463,9 +463,10 @@ static int spi_dw_transceive_async(struct device *dev,
 }
 #endif /* CONFIG_SPI_ASYNC */
 
-static int spi_dw_release(struct device *dev, const struct spi_config *config)
+static int spi_dw_release(const struct device *dev,
+			  const struct spi_config *config)
 {
-	struct spi_dw_data *spi = dev->driver_data;
+	struct spi_dw_data *spi = dev->data;
 
 	if (!spi_context_configured(&spi->ctx, config)) {
 		return -EINVAL;
@@ -476,9 +477,9 @@ static int spi_dw_release(struct device *dev, const struct spi_config *config)
 	return 0;
 }
 
-void spi_dw_isr(struct device *dev)
+void spi_dw_isr(const struct device *dev)
 {
-	const struct spi_dw_config *info = dev->config_info;
+	const struct spi_dw_config *info = dev->config;
 	uint32_t int_status;
 	int error;
 
@@ -515,10 +516,10 @@ static const struct spi_driver_api dw_spi_api = {
 	.release = spi_dw_release,
 };
 
-int spi_dw_init(struct device *dev)
+int spi_dw_init(const struct device *dev)
 {
-	const struct spi_dw_config *info = dev->config_info;
-	struct spi_dw_data *spi = dev->driver_data;
+	const struct spi_dw_config *info = dev->config;
+	struct spi_dw_data *spi = dev->data;
 
 	clock_config(dev);
 	clock_on(dev);

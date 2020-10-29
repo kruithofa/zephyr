@@ -165,6 +165,14 @@ do {                                                                    \
 			__attribute__((long_call, section(".ramfunc")))
 #endif /* !CONFIG_XIP */
 
+#ifndef __fallthrough
+#if __GNUC__ >= 7
+#define __fallthrough        __attribute__((fallthrough))
+#else
+#define __fallthrough
+#endif	/* __GNUC__ >= 7 */
+#endif
+
 #ifndef __packed
 #define __packed        __attribute__((__packed__))
 #endif
@@ -185,6 +193,10 @@ do {                                                                    \
 #define unlikely(x) __builtin_expect((bool)!!(x), false)
 
 #define popcount(x) __builtin_popcount(x)
+
+#ifndef __no_optimization
+#define __no_optimization __attribute__((optimize("-O0")))
+#endif
 
 #ifndef __weak
 #define __weak __attribute__((__weak__))
@@ -461,6 +473,22 @@ do {                                                                    \
 		__typeof__(b) _value_b_ = (b); \
 		_value_a_ < _value_b_ ? _value_a_ : _value_b_; \
 	})
+
+/**
+ * @brief Calculate power of two ceiling for some nonzero value
+ *
+ * @param x Nonzero unsigned long value
+ * @return X rounded up to the next power of two
+ */
+#ifdef CONFIG_64BIT
+#define Z_POW2_CEIL(x) ((1UL << (63U - __builtin_clzl(x))) < x ?  \
+		1UL << (63U - __builtin_clzl(x) + 1U) : \
+		1UL << (63U - __builtin_clzl(x)))
+#else
+#define Z_POW2_CEIL(x) ((1UL << (31U - __builtin_clzl(x))) < x ?  \
+		1UL << (31U - __builtin_clzl(x) + 1U) : \
+		1UL << (31U - __builtin_clzl(x)))
+#endif
 
 #endif /* !_LINKER */
 #endif /* ZEPHYR_INCLUDE_TOOLCHAIN_GCC_H_ */

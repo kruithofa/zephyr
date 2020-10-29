@@ -26,7 +26,6 @@
   - "lib/libc/**/*"
 "area: Devicetree":
   - "dts/**/*"
-  - "!dts/bindings/**/*"
   - "**/*.dts"
   - "**/*.dtsi"
   - "include/devicetree.h"
@@ -56,6 +55,9 @@
 "area: ARM":
   - "arch/arm/**/*"
   - "include/arch/arm/**/*"
+"area: ARM_64":
+  - "arch/arm/core/aarch64/**/*"
+  - "include/arch/arm/aarch64/**/*"
 "area: NIOS2":
   - "arch/nios2/**/*"
   - "include/arch/nios2/**/*"

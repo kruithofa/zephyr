@@ -66,14 +66,15 @@ static void remove_timeout(struct _timeout *t)
 
 static int32_t elapsed(void)
 {
-	return announce_remaining == 0 ? z_clock_elapsed() : 0;
+	return announce_remaining == 0 ? z_clock_elapsed() : 0U;
 }
 
 static int32_t next_timeout(void)
 {
 	struct _timeout *to = first();
 	int32_t ticks_elapsed = elapsed();
-	int32_t ret = to == NULL ? MAX_WAIT : MAX(0, to->dticks - ticks_elapsed);
+	int32_t ret = to == NULL ? MAX_WAIT
+		: MIN(MAX_WAIT, MAX(0, to->dticks - ticks_elapsed));
 
 #ifdef CONFIG_TIMESLICING
 	if (_current_cpu->slice_ticks && _current_cpu->slice_ticks < ret) {
@@ -89,6 +90,10 @@ void z_add_timeout(struct _timeout *to, _timeout_func_t fn,
 	if (K_TIMEOUT_EQ(timeout, K_FOREVER)) {
 		return;
 	}
+
+#ifdef KERNEL_COHERENCE
+	__ASSERT_NO_MSG(arch_mem_coherent(to));
+#endif
 
 #ifdef CONFIG_LEGACY_TIMEOUT_API
 	k_ticks_t ticks = timeout;
@@ -109,8 +114,6 @@ void z_add_timeout(struct _timeout *to, _timeout_func_t fn,
 
 		to->dticks = ticks + elapsed();
 		for (t = first(); t != NULL; t = next(t)) {
-			__ASSERT(t->dticks >= 0, "");
-
 			if (t->dticks > to->dticks) {
 				t->dticks -= to->dticks;
 				sys_dlist_insert(&t->node, &to->node);
@@ -144,7 +147,7 @@ int z_abort_timeout(struct _timeout *to)
 }
 
 /* must be locked */
-static k_ticks_t timeout_rem(struct _timeout *timeout)
+static k_ticks_t timeout_rem(const struct _timeout *timeout)
 {
 	k_ticks_t ticks = 0;
 
@@ -162,7 +165,7 @@ static k_ticks_t timeout_rem(struct _timeout *timeout)
 	return ticks - elapsed();
 }
 
-k_ticks_t z_timeout_remaining(struct _timeout *timeout)
+k_ticks_t z_timeout_remaining(const struct _timeout *timeout)
 {
 	k_ticks_t ticks = 0;
 
@@ -173,7 +176,7 @@ k_ticks_t z_timeout_remaining(struct _timeout *timeout)
 	return ticks;
 }
 
-k_ticks_t z_timeout_expires(struct _timeout *timeout)
+k_ticks_t z_timeout_expires(const struct _timeout *timeout)
 {
 	k_ticks_t ticks = 0;
 
@@ -194,12 +197,13 @@ int32_t z_get_next_timeout_expiry(void)
 	return ret;
 }
 
-void z_set_timeout_expiry(int32_t ticks, bool idle)
+void z_set_timeout_expiry(int32_t ticks, bool is_idle)
 {
 	LOCKED(&timeout_lock) {
-		int next = next_timeout();
-		bool sooner = (next == K_TICKS_FOREVER) || (ticks < next);
-		bool imminent = next <= 1;
+		int next_to = next_timeout();
+		bool sooner = (next_to == K_TICKS_FOREVER)
+			      || (ticks < next_to);
+		bool imminent = next_to <= 1;
 
 		/* Only set new timeouts when they are sooner than
 		 * what we have.  Also don't try to set a timeout when
@@ -212,7 +216,7 @@ void z_set_timeout_expiry(int32_t ticks, bool idle)
 		 * in.
 		 */
 		if (!imminent && (sooner || IS_ENABLED(CONFIG_SMP))) {
-			z_clock_set_timeout(ticks, idle);
+			z_clock_set_timeout(ticks, is_idle);
 		}
 	}
 }

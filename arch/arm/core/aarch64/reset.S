@@ -62,17 +62,17 @@ SECTION_SUBSEC_FUNC(TEXT,_reset_section,__start)
 	msr	vbar_el3, x19
 	isb
 
+	/* Setup a stack for EL3 (SP_ELx) */
+	ldr	x0, =(z_interrupt_stacks)
+	add	x0, x0, #(CONFIG_ISR_STACK_SIZE)
+	mov	sp, x0
+
 	/* Initialize sctlr_el3 to reset value */
 	mov_imm	x1, SCTLR_EL3_RES1
 	mrs     x0, sctlr_el3
 	orr	x0, x0, x1
 	msr	sctlr_el3, x0
 	isb
-
-	/* SError, IRQ and FIQ routing enablement in EL3 */
-	mrs	x0, scr_el3
-	orr	x0, x0, #(SCR_EL3_IRQ | SCR_EL3_FIQ | SCR_EL3_EA)
-	msr	scr_el3, x0
 
 	/*
 	* Disable access traps to EL3 for CPACR, Trace, FP, ASIMD,
@@ -88,7 +88,6 @@ SECTION_SUBSEC_FUNC(TEXT,_reset_section,__start)
 	/* Platform specific configurations needed in EL3 */
 	bl	z_arch_el3_plat_init
 
-#ifdef CONFIG_SWITCH_TO_EL1
 	/*
 	* Zephyr entry happened in EL3. Do EL3 specific init before
 	* dropping to lower EL.
@@ -119,43 +118,20 @@ SECTION_SUBSEC_FUNC(TEXT,_reset_section,__start)
 	adr	x0, 1f
 	msr	elr_el3, x0
 	eret
-#endif
-	/*
-	 * Enable the instruction cache, stack pointer and data access
-	 * alignment checks.
-	 */
-	mov	x1, #(SCTLR_I_BIT | SCTLR_A_BIT | SCTLR_SA_BIT)
-	mrs	x0, sctlr_el3
-	orr	x0, x0, x1
-	msr	sctlr_el3, x0
-	isb
-	b	0f
 
 2:
-	/* Initialize VBAR */
-	msr	vbar_el2, x19
-
-	/* SError, IRQ and FIQ routing enablement in EL2 */
-	mrs	x0, hcr_el2
-	orr	x0, x0, #(HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO)
-	msr	hcr_el2, x0
-
-	/* Disable access trapping in EL2 for NEON/FP */
-	msr	cptr_el2, xzr
-
-	/*
-	 * Enable the instruction cache, stack pointer and data access
-	 * alignment checks.
-	 */
-	mov	x1, #(SCTLR_I_BIT | SCTLR_A_BIT | SCTLR_SA_BIT)
-	mrs	x0, sctlr_el2
-	orr	x0, x0, x1
-	msr	sctlr_el2, x0
-	b	0f
+	/* Booting from EL2 is not supported */
+	b	.
 
 1:
 	/* Initialize VBAR */
 	msr	vbar_el1, x19
+	isb
+
+	/* Setup the stack (SP_ELx) */
+	ldr	x0, =(z_interrupt_stacks)
+	add	x0, x0, #(CONFIG_ISR_STACK_SIZE)
+	mov	sp, x0
 
 	/* Disable access trapping in EL1 for NEON/FP */
 	mov	x0, #(CPACR_EL1_FPEN_NOTRAP)
@@ -174,11 +150,5 @@ SECTION_SUBSEC_FUNC(TEXT,_reset_section,__start)
 
 	/* Enable the SError interrupt */
 	msr	daifclr, #(DAIFSET_ABT)
-
-	/* Switch to SP_ELn and setup the stack */
-	msr	spsel, #1
-	ldr	x0, =(z_interrupt_stacks)
-	add	x0, x0, #(CONFIG_ISR_STACK_SIZE)
-	mov	sp, x0
 
 	bl	z_arm64_prep_c

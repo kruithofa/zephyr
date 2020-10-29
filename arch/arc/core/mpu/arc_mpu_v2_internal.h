@@ -16,10 +16,6 @@
 #define AUX_MPU_RDP_ATTR_MASK (0x1FC)
 #define AUX_MPU_RDP_SIZE_MASK (0xE03)
 
-#define _ARC_V2_MPU_EN   (0x409)
-#define _ARC_V2_MPU_RDB0 (0x422)
-#define _ARC_V2_MPU_RDP0 (0x423)
-
 /* For MPU version 2, the minimum protection region size is 2048 bytes */
 #define ARC_FEATURE_MPU_ALIGNMENT_BITS 11
 
@@ -29,19 +25,19 @@
 static inline void _region_init(uint32_t index, uint32_t region_addr, uint32_t size,
 				uint32_t region_attr)
 {
-	uint8_t bits = find_msb_set(size) - 1;
-
 	index = index * 2U;
 
-	if (bits < ARC_FEATURE_MPU_ALIGNMENT_BITS) {
-		bits = ARC_FEATURE_MPU_ALIGNMENT_BITS;
-	}
-
-	if ((1 << bits) < size) {
-		bits++;
-	}
-
 	if (size > 0) {
+		uint8_t bits = find_msb_set(size) - 1;
+
+		if (bits < ARC_FEATURE_MPU_ALIGNMENT_BITS) {
+			bits = ARC_FEATURE_MPU_ALIGNMENT_BITS;
+		}
+
+		if ((1 << bits) < size) {
+			bits++;
+		}
+
 		region_attr &= ~(AUX_MPU_RDP_SIZE_MASK);
 		region_attr |= AUX_MPU_RDP_REGION_SIZE(bits);
 		region_addr |= AUX_MPU_RDB_VALID_MASK;
@@ -200,7 +196,8 @@ void arc_core_mpu_configure_thread(struct k_thread *thread)
 	if (thread->base.user_options & K_USER) {
 		LOG_DBG("configure user thread %p's stack", thread);
 		if (_mpu_configure(THREAD_STACK_USER_REGION,
-		(uint32_t)thread->stack_obj, thread->stack_info.size) < 0) {
+				   (uint32_t)thread->stack_info.start,
+				   thread->stack_info.size) < 0) {
 			LOG_ERR("user thread %p's stack failed", thread);
 			return;
 		}
@@ -373,7 +370,7 @@ int arc_core_mpu_buffer_validate(void *addr, size_t size, int write)
  * This function provides the default configuration mechanism for the Memory
  * Protection Unit (MPU).
  */
-static int arc_mpu_init(struct device *arg)
+static int arc_mpu_init(const struct device *arg)
 {
 	ARG_UNUSED(arg);
 

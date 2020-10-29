@@ -88,7 +88,7 @@ static uint8_t pwm_channel_map(struct pwm_data *data, uint8_t map_size,
 	return i;
 }
 
-static int pwm_nrf5_sw_pin_set(struct device *dev, uint32_t pwm,
+static int pwm_nrf5_sw_pin_set(const struct device *dev, uint32_t pwm,
 			       uint32_t period_cycles, uint32_t pulse_cycles,
 			       pwm_flags_t flags)
 {
@@ -100,9 +100,9 @@ static int pwm_nrf5_sw_pin_set(struct device *dev, uint32_t pwm,
 	uint16_t div;
 	uint32_t ret;
 
-	config = (const struct pwm_config *)dev->config_info;
+	config = (const struct pwm_config *)dev->config;
 	timer = config->timer;
-	data = dev->driver_data;
+	data = dev->data;
 
 	if (flags) {
 		/* PWM polarity not supported (yet?) */
@@ -213,12 +213,13 @@ pin_set_pwm_off:
 	return 0;
 }
 
-static int pwm_nrf5_sw_get_cycles_per_sec(struct device *dev, uint32_t pwm,
+static int pwm_nrf5_sw_get_cycles_per_sec(const struct device *dev,
+					  uint32_t pwm,
 					  uint64_t *cycles)
 {
 	const struct pwm_config *config;
 
-	config = (const struct pwm_config *)dev->config_info;
+	config = (const struct pwm_config *)dev->config;
 
 	/* HF timer frequency is derived from 16MHz source with a prescaler */
 	*cycles = 16000000UL / BIT(config->prescaler);
@@ -231,12 +232,12 @@ static const struct pwm_driver_api pwm_nrf5_sw_drv_api_funcs = {
 	.get_cycles_per_sec = pwm_nrf5_sw_get_cycles_per_sec,
 };
 
-static int pwm_nrf5_sw_init(struct device *dev)
+static int pwm_nrf5_sw_init(const struct device *dev)
 {
 	const struct pwm_config *config;
 	NRF_TIMER_Type *timer;
 
-	config = (const struct pwm_config *)dev->config_info;
+	config = (const struct pwm_config *)dev->config;
 	timer = config->timer;
 
 	/* setup HF timer */

@@ -1,19 +1,15 @@
 /*
- * Copyright (c) 2014-2015 Wind River Systems, Inc.
+ * Copyright (c) 2020 Synopsys.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 /**
- * @brief Common parts of the linker scripts for the ARCv2/EM targets.
+ * @brief Common parts of the linker scripts for the ARCv2 targets for
+ * GNU and MWDT toolchains.
  */
 
 #include <linker/sections.h>
-
-#if defined(CONFIG_UART_NSIM)
-	EXTERN(_VectorTable)
-#endif
-
 #include <linker/linker-defs.h>
 #include <linker/linker-tool.h>
 
@@ -37,7 +33,7 @@
 	#elif CONFIG_ARC_MPU_VER == 3
 		#define MPU_MIN_SIZE 32
 	#endif
-	#define MPU_MIN_SIZE_ALIGN . = ALIGN(MPU_MIN_SIZE );
+	#define MPU_MIN_SIZE_ALIGN . = ALIGN(MPU_MIN_SIZE);
 	#if defined(CONFIG_MPU_REQUIRES_POWER_OF_TWO_ALIGNMENT)
 		#define MPU_ALIGN(region_size) \
 			. = ALIGN(MPU_MIN_SIZE); \
@@ -87,16 +83,14 @@ SECTIONS {
 		_image_rom_start = .;
 		_image_text_start = .;
 
-/* Located in generated directory. This file is populated by calling
- * zephyr_linker_sources(ROM_START ...). This typically contains the vector
- * table and debug information.
+/* Located in generated directory. This file is populated by the
+ * zephyr_linker_sources() Cmake function.
  */
 #include <snippets-rom-start.ld>
-
-		*(.text)
-		*(".text.*")
+		*(.text .text.*)
 		*(.gnu.linkonce.t.*)
 
+	. = ALIGN(4);
 #include <linker/kobject-text.ld>
 	} GROUP_LINK_IN(ROMABLE_REGION)
 
@@ -108,7 +102,7 @@ SECTIONS {
 	SECTION_PROLOGUE(_RODATA_SECTION_NAME,,) {
 		KEEP(*(.openocd_dbg))
 		KEEP(*(".openocd_dbg.*"))
-		*(.rodata)
+		*(".rodata")
 		*(".rodata.*")
 		*(.gnu.linkonce.r.*)
 
@@ -118,10 +112,13 @@ SECTIONS {
 #include <snippets-rodata.ld>
 
 #include <linker/kobject-rom.ld>
-
 	} GROUP_LINK_IN(ROMABLE_REGION)
 
+#ifdef __MWDT_LINKER_CMD__
+/* TODO: add mwdt specific ROM C++ sections */
+#else
 #include <linker/cplusplus-rom.ld>
+#endif /* __MWDT_LINKER_CMD__ */
 
 	_image_rodata_end = .;
 	MPU_ALIGN(_image_rodata_end - _image_rom_start);
@@ -160,7 +157,7 @@ SECTIONS {
 		__bss_start = .;
 		_image_ram_start = .;
 		__kernel_ram_start = .;
-		*(.bss)
+		*(".bss")
 		*(".bss.*")
 		*(COMMON)
 		*(".kernel_bss.*")
@@ -172,27 +169,13 @@ SECTIONS {
 		__bss_end = ALIGN(4);
 	} GROUP_DATA_LINK_IN(RAMABLE_REGION, RAMABLE_REGION)
 
-	SECTION_PROLOGUE(_NOINIT_SECTION_NAME,(NOLOAD),) {
-		/*
-		 * This section is used for non-initialized objects that
-		 * will not be cleared during the boot process.
-		 */
-		 *(.noinit)
-		 *(".noinit.*")
-		 *(".kernel_noinit.*")
-
-/* Located in generated directory. This file is populated by the
- * zephyr_linker_sources() Cmake function.
- */
-#include <snippets-noinit.ld>
-
-	} GROUP_LINK_IN(RAMABLE_REGION)
+#include <linker/common-noinit.ld>
 
 	SECTION_DATA_PROLOGUE(_DATA_SECTION_NAME,,) {
 
 /* when XIP, .text is in ROM, but vector table must be at start of .data */
 		__data_ram_start = .;
-		*(.data)
+		*(".data")
 		*(".data.*")
 		*(".kernel.*")
 
@@ -207,12 +190,15 @@ SECTIONS {
 
 #include <linker/common-ram.ld>
 #include <linker/kobject.ld>
+
+#ifdef __MWDT_LINKER_CMD__
+/* TODO: add mwdt specific RAM C++ sections */
+#else
 #include <linker/cplusplus-ram.ld>
+#endif /* __MWDT_LINKER_CMD__ */
 
 	__data_ram_end = .;
-
 	MPU_MIN_SIZE_ALIGN
-
 	/* Define linker symbols */
 	_image_ram_end = .;
 	_end = .; /* end of image */
@@ -229,12 +215,10 @@ SECTIONS {
 
 #include <linker/debug-sections.ld>
 
-
-    SECTION_PROLOGUE(.ARC.attributes, 0,)
-	{
-	KEEP(*(.ARC.attributes))
-	KEEP(*(.gnu.attributes))
+	SECTION_PROLOGUE(.ARC.attributes, 0,) {
+		KEEP(*(.ARC.attributes))
+		KEEP(*(.gnu.attributes))
 	}
 
-    /DISCARD/ : { *(.note.GNU-stack) }
-	}
+	/DISCARD/ : { *(.note.GNU-stack) }
+}

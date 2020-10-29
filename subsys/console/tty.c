@@ -12,10 +12,9 @@
 static int tty_irq_input_hook(struct tty_serial *tty, uint8_t c);
 static int tty_putchar(struct tty_serial *tty, uint8_t c);
 
-static void tty_uart_isr(void *user_data)
+static void tty_uart_isr(const struct device *dev, void *user_data)
 {
 	struct tty_serial *tty = user_data;
-	struct device *dev = tty->uart_dev;
 
 	uart_irq_update(dev);
 
@@ -239,7 +238,7 @@ ssize_t tty_read(struct tty_serial *tty, void *buf, size_t size)
 	return out_size;
 }
 
-int tty_init(struct tty_serial *tty, struct device *uart_dev)
+int tty_init(struct tty_serial *tty, const struct device *uart_dev)
 {
 	if (!uart_dev) {
 		return -ENODEV;

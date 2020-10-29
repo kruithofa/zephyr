@@ -29,8 +29,7 @@ Building and Running
 ********************
 
 This project outputs startup status and info to the console. It can be built and
-executed on an MPS2+ configured for AN521 (dual-core ARM Cortex M33), or using
-the ``mps2_an521_nonsecure`` target with QEMU.
+executed on an ARM Cortex M33 target board or QEMU.
 
 This sample will only build on a Linux or macOS development system
 (not Windows), and has been tested on the following setups:
@@ -125,6 +124,61 @@ and run it in qemu via the ``run`` command.
       mkdir build && cd build
       cmake -DBOARD=mps2_an521_nonsecure ..
       make run
+
+On LPCxpresso55S69:
+======================
+
+Build Zephyr with a non-secure configuration:
+
+   .. code-block:: bash
+
+      $ west build -p -b lpcxpresso55s69_ns samples/tfm_integration/psa_level_1/ --
+
+Next we need to manually flash the secure (``tfm_s.hex``)
+and non-secure (``zephyr.hex``) images wth a J-Link as follows:
+
+   .. code-block:: console
+
+      JLinkExe -device lpc55s69 -if swd -speed 2000 -autoconnect 1
+      J-Link>loadfile build/tfm/install/outputs/NXP/LPCXPRESSO55S69/tfm_s.hex
+      J-Link>loadfile build/zephyr/zephyr.hex
+
+NOTE: At present, the LPC55S69 doesn't include support for the MCUBoot bootloader.
+
+We need to reset the board manually after flashing the image to run this code.
+
+On nRF5340 and nRF9160:
+=======================
+
+Build Zephyr with a non-secure configuration
+(``-DBOARD=nrf5340pdk_nrf5340_cpuappns`` or ``-DBOARD=nrf9160dk_nrf9160ns``).
+
+   Example, for nRF9160, using ``cmake`` and ``ninja``
+
+   .. code-block:: bash
+
+      cd <ZEPHYR_ROOT>/samples/tfm_integration/psa_level_1/
+      rm -rf build
+      mkdir build && cd build
+      cmake -GNinja -DBOARD=nrf9160dk_nrf9160ns ..
+
+If building with BL2 (MCUboot bootloader) enabled, manually flash
+the MCUboot bootloader image binary (``bl2.hex``).
+
+   Example, using ``nrfjprog`` on nRF9160:
+
+   .. code-block:: bash
+
+      nrfjprg -f NRF91 --program tfm/bin/bl2.hex --sectorerase
+
+Finally, flash the concatenated TF-M + Zephyr binary.
+
+   Example, for nRF9160, using ``cmake`` and ``ninja``
+
+   .. code-block:: bash
+
+      ninja flash
+
 
 Sample Output
 =============

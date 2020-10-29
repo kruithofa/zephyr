@@ -20,7 +20,7 @@
 
 set -xe
 
-sanitycheck_options=" --inline-logs -N -v"
+sanitycheck_options=" --inline-logs -N -v --integration"
 export BSIM_OUT_PATH="${BSIM_OUT_PATH:-/opt/bsim/}"
 if [ ! -d "${BSIM_OUT_PATH}" ]; then
         unset BSIM_OUT_PATH
@@ -258,10 +258,10 @@ if [ -n "$main_ci" ]; then
 	fi
 
 	if [ "$SC" == "full" ]; then
-	# Save list of tests to be run
-	${sanitycheck} ${sanitycheck_options} --save-tests test_file_3.txt || exit 1
+		# Save list of tests to be run
+		${sanitycheck} ${sanitycheck_options} --save-tests test_file_3.txt || exit 1
 	else
-	echo "test,arch,platform,status,extra_args,handler,handler_time,ram_size,rom_size" > test_file_3.txt
+		echo "test,arch,platform,status,extra_args,handler,handler_time,ram_size,rom_size" > test_file_3.txt
 	fi
 
 	# Remove headers from all files but the first one to generate one
@@ -277,7 +277,7 @@ if [ -n "$main_ci" ]; then
 		--subset ${matrix}/${matrix_builds} --retry-failed 3
 
 	# Run module tests on matrix #1
-	if [ "$matrix" = "1" ]; then
+	if [ "$matrix" = "1" -a  "$SC" == "full" ]; then
 		if [ -s module_tests.args ]; then
 			${sanitycheck} ${sanitycheck_options} \
 				+module_tests.args --outdir module_tests

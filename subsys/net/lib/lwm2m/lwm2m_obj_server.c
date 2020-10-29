@@ -133,6 +133,19 @@ int32_t lwm2m_server_get_pmax(uint16_t obj_inst_id)
 				       CONFIG_LWM2M_SERVER_DEFAULT_PMAX);
 }
 
+int lwm2m_server_short_id_to_inst(uint16_t short_id)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(inst); i++) {
+		if (inst[i].obj && server_id[i] == short_id) {
+			return inst[i].obj_inst_id;
+		}
+	}
+
+	return -ENOENT;
+}
+
 static struct lwm2m_engine_obj_inst *server_create(uint16_t obj_inst_id)
 {
 	int index, i = 0, j = 0;
@@ -209,7 +222,7 @@ static struct lwm2m_engine_obj_inst *server_create(uint16_t obj_inst_id)
 	return &inst[index];
 }
 
-static int lwm2m_server_init(struct device *dev)
+static int lwm2m_server_init(const struct device *dev)
 {
 	struct lwm2m_engine_obj_inst *obj_inst = NULL;
 	int ret = 0;

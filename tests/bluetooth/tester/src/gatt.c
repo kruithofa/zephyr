@@ -9,7 +9,6 @@
 #include <zephyr/types.h>
 #include <string.h>
 #include <errno.h>
-#include <assert.h>
 
 #include <toolchain.h>
 #include <bluetooth/bluetooth.h>
@@ -18,6 +17,7 @@
 #include <bluetooth/uuid.h>
 #include <sys/byteorder.h>
 #include <sys/printk.h>
+#include <sys/__assert.h>
 #include <net/buf.h>
 
 #include <logging/log.h>
@@ -357,7 +357,7 @@ static ssize_t write_value(struct bt_conn *conn,
 	memcpy(value->data + offset, buf, len);
 
 	/* Maximum attribute value size is 512 bytes */
-	assert(value->len < 512);
+	__ASSERT_NO_MSG(value->len < 512);
 
 	attr_value_changed_ev(attr->handle, value->data, value->len);
 
@@ -1814,7 +1814,8 @@ struct get_attrs_foreach_data {
 	uint8_t count;
 };
 
-static uint8_t get_attrs_rp(const struct bt_gatt_attr *attr, void *user_data)
+static uint8_t get_attrs_rp(const struct bt_gatt_attr *attr, uint16_t handle,
+			    void *user_data)
 {
 	struct get_attrs_foreach_data *foreach = user_data;
 	struct gatt_attr *gatt_attr;
@@ -1825,7 +1826,7 @@ static uint8_t get_attrs_rp(const struct bt_gatt_attr *attr, void *user_data)
 	}
 
 	gatt_attr = net_buf_simple_add(foreach->buf, sizeof(*gatt_attr));
-	gatt_attr->handle = sys_cpu_to_le16(attr->handle);
+	gatt_attr->handle = sys_cpu_to_le16(handle);
 	gatt_attr->permission = attr->perm;
 
 	if (attr->uuid->type == BT_UUID_TYPE_16) {
@@ -1902,7 +1903,8 @@ static uint8_t err_to_att(int err)
 	return BT_ATT_ERR_UNLIKELY;
 }
 
-static uint8_t get_attr_val_rp(const struct bt_gatt_attr *attr, void *user_data)
+static uint8_t get_attr_val_rp(const struct bt_gatt_attr *attr, uint16_t handle,
+			       void *user_data)
 {
 	struct net_buf_simple *buf = user_data;
 	struct gatt_get_attribute_value_rp *rp;

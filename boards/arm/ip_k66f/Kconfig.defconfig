@@ -28,10 +28,10 @@ config NET_L2_ETHERNET
 config ETH_MCUX
 	default y if NET_L2_ETHERNET
 
-config ETH_MCUX_0
+config ETH_MCUX_RMII_EXT_CLK
 	default y if ETH_MCUX
 
-config ETH_MCUX_RMII_EXT_CLK
+config ETH_MCUX_NO_PHY_SMI
 	default y if ETH_MCUX
 
 endif # NETWORKING

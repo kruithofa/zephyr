@@ -752,7 +752,7 @@ static void rfcomm_dlc_connected(struct bt_rfcomm_dlc *dlc)
 
 	k_fifo_init(&dlc->tx_queue);
 	k_thread_create(&dlc->tx_thread, dlc->stack,
-			K_THREAD_STACK_SIZEOF(dlc->stack),
+			K_KERNEL_STACK_SIZEOF(dlc->stack),
 			rfcomm_dlc_tx_thread, dlc, NULL, NULL, K_PRIO_COOP(7),
 			0, K_NO_WAIT);
 	k_thread_name_set(&dlc->tx_thread, "BT DLC");
@@ -809,7 +809,7 @@ static int rfcomm_dlc_close(struct bt_rfcomm_dlc *dlc)
 		if (dlc->role == BT_RFCOMM_ROLE_ACCEPTOR) {
 			rfcomm_send_dm(dlc->session, dlc->dlci);
 		}
-		/* Fall Through */
+		__fallthrough;
 	case BT_RFCOMM_STATE_INIT:
 		rfcomm_dlc_drop(dlc);
 		break;

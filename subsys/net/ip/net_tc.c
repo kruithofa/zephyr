@@ -18,12 +18,18 @@ LOG_MODULE_REGISTER(net_tc, CONFIG_NET_TC_LOG_LEVEL);
 #include "net_stats.h"
 #include "net_tc_mapping.h"
 
+/* Template for thread name. The "xx" is either "TX" denoting transmit thread,
+ * or "RX" denoting receive thread. The "q[y]" denotes the traffic class queue
+ * where y indicates the traffic class id. The value of y can be from 0 to 7.
+ */
+#define MAX_NAME_LEN sizeof("xx_q[y]")
+
 /* Stacks for TX work queue */
-K_THREAD_STACK_ARRAY_DEFINE(tx_stack, NET_TC_TX_COUNT,
+K_KERNEL_STACK_ARRAY_DEFINE(tx_stack, NET_TC_TX_COUNT,
 			    CONFIG_NET_TX_STACK_SIZE);
 
 /* Stacks for RX work queue */
-K_THREAD_STACK_ARRAY_DEFINE(rx_stack, NET_TC_RX_COUNT,
+K_KERNEL_STACK_ARRAY_DEFINE(rx_stack, NET_TC_RX_COUNT,
 			    CONFIG_NET_RX_STACK_SIZE);
 
 static struct net_traffic_class tx_classes[NET_TC_TX_COUNT];
@@ -35,6 +41,8 @@ bool net_tc_submit_to_tx_queue(uint8_t tc, struct net_pkt *pkt)
 		return false;
 	}
 
+	net_pkt_set_tx_stats_tick(pkt, k_cycle_get_32());
+
 	k_work_submit_to_queue(&tx_classes[tc].work_q, net_pkt_work(pkt));
 
 	return true;
@@ -42,6 +50,8 @@ bool net_tc_submit_to_tx_queue(uint8_t tc, struct net_pkt *pkt)
 
 void net_tc_submit_to_rx_queue(uint8_t tc, struct net_pkt *pkt)
 {
+	net_pkt_set_rx_stats_tick(pkt, k_cycle_get_32());
+
 	k_work_submit_to_queue(&rx_classes[tc].work_q, net_pkt_work(pkt));
 }
 
@@ -230,19 +240,24 @@ void net_tc_tx_init(void)
 		uint8_t thread_priority;
 
 		thread_priority = tx_tc2thread(i);
-		tx_classes[i].tc = thread_priority;
 
 		NET_DBG("[%d] Starting TX queue %p stack size %zd "
 			"prio %d (%d)", i,
 			&tx_classes[i].work_q.queue,
-			K_THREAD_STACK_SIZEOF(tx_stack[i]),
+			K_KERNEL_STACK_SIZEOF(tx_stack[i]),
 			thread_priority, K_PRIO_COOP(thread_priority));
 
 		k_work_q_start(&tx_classes[i].work_q,
 			       tx_stack[i],
-			       K_THREAD_STACK_SIZEOF(tx_stack[i]),
+			       K_KERNEL_STACK_SIZEOF(tx_stack[i]),
 			       K_PRIO_COOP(thread_priority));
-		k_thread_name_set(&tx_classes[i].work_q.thread, "tx_workq");
+
+		if (IS_ENABLED(CONFIG_THREAD_NAME)) {
+			char name[MAX_NAME_LEN];
+
+			snprintk(name, sizeof(name), "tx_q[%d]", i);
+			k_thread_name_set(&tx_classes[i].work_q.thread, name);
+		}
 	}
 }
 
@@ -260,18 +275,23 @@ void net_tc_rx_init(void)
 		uint8_t thread_priority;
 
 		thread_priority = rx_tc2thread(i);
-		rx_classes[i].tc = thread_priority;
 
 		NET_DBG("[%d] Starting RX queue %p stack size %zd "
 			"prio %d (%d)", i,
 			&rx_classes[i].work_q.queue,
-			K_THREAD_STACK_SIZEOF(rx_stack[i]),
+			K_KERNEL_STACK_SIZEOF(rx_stack[i]),
 			thread_priority, K_PRIO_COOP(thread_priority));
 
 		k_work_q_start(&rx_classes[i].work_q,
 			       rx_stack[i],
-			       K_THREAD_STACK_SIZEOF(rx_stack[i]),
+			       K_KERNEL_STACK_SIZEOF(rx_stack[i]),
 			       K_PRIO_COOP(thread_priority));
-		k_thread_name_set(&rx_classes[i].work_q.thread, "rx_workq");
+
+		if (IS_ENABLED(CONFIG_THREAD_NAME)) {
+			char name[MAX_NAME_LEN];
+
+			snprintk(name, sizeof(name), "rx_q[%d]", i);
+			k_thread_name_set(&rx_classes[i].work_q.thread, name);
+		}
 	}
 }

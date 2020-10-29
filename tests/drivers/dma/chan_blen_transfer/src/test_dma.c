@@ -5,10 +5,8 @@
  */
 
 /**
- * @addtogroup t_dma_mem_to_mem
- * @{
- * @defgroup t_dma_m2m_chan_burst test_dma_m2m_chan_burst
- * @brief TestPurpose: verify zephyr dma memory to memory transfer
+ * @file
+ * @brief Verify zephyr dma memory to memory transfer
  * @details
  * - Test Steps
  *   -# Set dma channel configuration including source/dest addr, burstlen
@@ -16,7 +14,6 @@
  *   -# Start transfer
  * - Expected Results
  *   -# Data is transferred correctly from src to dest
- * @}
  */
 
 #include <zephyr.h>
@@ -37,7 +34,8 @@ static const char tx_data[] = "It is harder to be kind than to be wise........";
 static char rx_data[RX_BUFF_SIZE] = { 0 };
 #endif
 
-static void test_done(void *arg, uint32_t id, int error_code)
+static void test_done(const struct device *dma_dev, void *arg,
+		      uint32_t id, int error_code)
 {
 	if (error_code == 0) {
 		TC_PRINT("DMA transfer done\n");
@@ -50,7 +48,7 @@ static int test_task(uint32_t chan_id, uint32_t blen)
 {
 	struct dma_config dma_cfg = { 0 };
 	struct dma_block_config dma_block_cfg = { 0 };
-	struct device *dma = device_get_binding(DMA_DEVICE_NAME);
+	const struct device *dma = device_get_binding(DMA_DEVICE_NAME);
 
 	if (!dma) {
 		TC_PRINT("Cannot get dma controller\n");

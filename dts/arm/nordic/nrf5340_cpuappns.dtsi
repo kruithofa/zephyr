@@ -35,7 +35,6 @@
 
 	soc {
 		sram0: memory@20000000 {
-			device_type = "memory";
 			compatible = "mmio-sram";
 		};
 
@@ -63,4 +62,8 @@
 
 &nvic {
 	arm,num-irq-priority-bits = <3>;
+};
+
+&systick {
+	status = "disabled";
 };

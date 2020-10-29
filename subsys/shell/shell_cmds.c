@@ -5,6 +5,7 @@
  */
 #include <shell/shell.h>
 #include "shell_utils.h"
+#include "shell_help.h"
 #include "shell_ops.h"
 #include "shell_vt100.h"
 
@@ -44,6 +45,7 @@
 	"command to be selected, it must meet the criteria:\n"		      \
 	" - it is a static command\n"					      \
 	" - it is not preceded by a dynamic command\n"			      \
+	" - it accepts arguments\n"					      \
 	"Return to the main command tree is done by pressing alt+r."
 
 #define SHELL_HELP_SHELL		"Useful, not Unix-like shell commands."
@@ -289,11 +291,24 @@ static int cmd_help(const struct shell *shell, size_t argc, char **argv)
 		" for more information.");
 #if defined(CONFIG_SHELL_METAKEYS)
 	shell_print(shell,
-		"Shell supports following meta-keys:\n"
+		"\nShell supports following meta-keys:\n"
 		"Ctrl+a, Ctrl+b, Ctrl+c, Ctrl+d, Ctrl+e, Ctrl+f, Ctrl+k,"
 		" Ctrl+l, Ctrl+n, Ctrl+p, Ctrl+u, Ctrl+w\nAlt+b, Alt+f.\n"
 		"Please refer to shell documentation for more details.");
 #endif
+
+	if (IS_ENABLED(CONFIG_SHELL_HELP)) {
+		/* For NULL argument function will print all root commands */
+		shell_help_subcmd_print(shell, NULL, "\nAvailable commands:\n");
+	} else {
+		const struct shell_static_entry *entry;
+		size_t idx = 0;
+
+		shell_print(shell, "\nAvailable commands:");
+		while ((entry = shell_cmd_get(NULL, idx++, NULL)) != NULL) {
+			shell_print(shell, "  %s", entry->syntax);
+		}
+	}
 
 	return 0;
 }
@@ -457,8 +472,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(m_sub_resize,
 
 SHELL_CMD_ARG_REGISTER(clear, NULL, SHELL_HELP_CLEAR, cmd_clear, 1, 0);
 SHELL_CMD_REGISTER(shell, &m_sub_shell, SHELL_HELP_SHELL, NULL);
-SHELL_CMD_ARG_REGISTER(help, NULL, SHELL_HELP_HELP, cmd_help,
-			1, SHELL_OPT_ARG_CHECK_SKIP);
+SHELL_CMD_ARG_REGISTER(help, NULL, SHELL_HELP_HELP, cmd_help, 1, 0);
 SHELL_COND_CMD_ARG_REGISTER(CONFIG_SHELL_HISTORY, history, NULL,
 			SHELL_HELP_HISTORY, cmd_history, 1, 0);
 SHELL_COND_CMD_ARG_REGISTER(CONFIG_SHELL_CMDS_RESIZE, resize, &m_sub_resize,

@@ -37,7 +37,10 @@ enum {
 	BT_CONN_AUTO_PHY_COMPLETE,      /* Auto-initiated PHY procedure done */
 	BT_CONN_AUTO_FEATURE_EXCH,	/* Auto-initiated LE Feat done */
 	BT_CONN_AUTO_VERSION_INFO,      /* Auto-initiated LE version done */
-	BT_CONN_AUTO_DATA_LEN_COMPLETE, /* Auto-initiated Data Length done */
+
+	/* Auto-initiated Data Length done. Auto-initiated Data Length Update
+	 * is only needed for controllers with BT_QUIRK_NO_AUTO_DLE. */
+	BT_CONN_AUTO_DATA_LEN_COMPLETE,
 
 	/* Total number of flags - must be at the end of the enum */
 	BT_CONN_NUM_FLAGS,
@@ -93,6 +96,15 @@ struct bt_conn_sco {
 };
 #endif
 
+struct bt_conn_iso {
+	/* Reference to ACL Connection */
+	struct bt_conn          *acl;
+	/* CIG ID */
+	uint8_t			cig_id;
+	/* CIS ID */
+	uint8_t			cis_id;
+};
+
 typedef void (*bt_conn_tx_cb_t)(struct bt_conn *conn, void *user_data);
 
 struct bt_conn_tx {
@@ -125,8 +137,7 @@ struct bt_conn {
 	uint8_t			err;
 
 	bt_conn_state_t		state;
-
-	uint16_t		        rx_len;
+	uint16_t rx_len;
 	struct net_buf		*rx;
 
 	/* Sent but not acknowledged TX packets with a callback */
@@ -144,7 +155,7 @@ struct bt_conn {
 	/* Queue for outgoing ACL data */
 	struct k_fifo		tx_queue;
 
-	/* Active L2CAP channels */
+	/* Active L2CAP/ISO channels */
 	sys_slist_t		channels;
 
 	atomic_t		ref;
@@ -158,6 +169,9 @@ struct bt_conn {
 		struct bt_conn_br	br;
 		struct bt_conn_sco	sco;
 #endif
+#if defined(CONFIG_BT_AUDIO)
+		struct bt_conn_iso	iso;
+#endif
 	};
 
 #if defined(CONFIG_BT_REMOTE_VERSION)
@@ -168,6 +182,8 @@ struct bt_conn {
 	} rv;
 #endif
 };
+
+void bt_conn_reset_rx_state(struct bt_conn *conn);
 
 /* Process incoming data for a connection */
 void bt_conn_recv(struct bt_conn *conn, struct net_buf *buf, uint8_t flags);
@@ -187,6 +203,26 @@ bool bt_conn_exists_le(uint8_t id, const bt_addr_le_t *peer);
 /* Add a new LE connection */
 struct bt_conn *bt_conn_add_le(uint8_t id, const bt_addr_le_t *peer);
 
+/** Connection parameters for ISO connections */
+struct bt_iso_create_param {
+	uint8_t			id;
+	uint8_t			num_conns;
+	struct bt_conn		**conns;
+	struct bt_iso_chan	**chans;
+};
+
+/* Bind ISO connections parameters */
+int bt_conn_bind_iso(struct bt_iso_create_param *param);
+
+/* Connect ISO connections */
+int bt_conn_connect_iso(struct bt_conn **conns, uint8_t num_conns);
+
+/* Add a new ISO connection */
+struct bt_conn *bt_conn_add_iso(struct bt_conn *acl);
+
+/* Cleanup ISO references */
+void bt_iso_cleanup(struct bt_conn *iso_conn);
+
 /* Add a new BR/EDR connection */
 struct bt_conn *bt_conn_add_br(const bt_addr_t *peer);
 
@@ -202,22 +238,31 @@ struct bt_conn *bt_conn_lookup_addr_sco(const bt_addr_t *peer);
 /* Look up an existing connection by BT address */
 struct bt_conn *bt_conn_lookup_addr_br(const bt_addr_t *peer);
 
-void bt_conn_pin_code_req(struct bt_conn *conn);
-uint8_t bt_conn_get_io_capa(void);
-uint8_t bt_conn_ssp_get_auth(const struct bt_conn *conn);
-void bt_conn_ssp_auth(struct bt_conn *conn, uint32_t passkey);
-void bt_conn_ssp_auth_complete(struct bt_conn *conn, uint8_t status);
-
 void bt_conn_disconnect_all(uint8_t id);
+
+/* Allocate new connection object */
+struct bt_conn *bt_conn_new(struct bt_conn *conns, size_t size);
 
 /* Look up an existing connection */
 struct bt_conn *bt_conn_lookup_handle(uint16_t handle);
 
 static inline bool bt_conn_is_handle_valid(struct bt_conn *conn)
 {
-	return conn->state == BT_CONN_CONNECTED ||
-	       conn->state == BT_CONN_DISCONNECT ||
-	       conn->state == BT_CONN_DISCONNECT_COMPLETE;
+	switch (conn->state) {
+	case BT_CONN_CONNECTED:
+	case BT_CONN_DISCONNECT:
+	case BT_CONN_DISCONNECT_COMPLETE:
+		return true;
+	case BT_CONN_CONNECT:
+		/* ISO connection handle assigned at connect state */
+		if (IS_ENABLED(CONFIG_BT_ISO) &&
+		    conn->type == BT_CONN_TYPE_ISO) {
+			return true;
+		}
+	__fallthrough;
+	default:
+		return false;
+	}
 }
 
 /* Check if the connection is with the given peer. */
@@ -264,7 +309,8 @@ void bt_conn_identity_resolved(struct bt_conn *conn);
 
 #if defined(CONFIG_BT_SMP) || defined(CONFIG_BT_BREDR)
 /* Notify higher layers that connection security changed */
-void bt_conn_security_changed(struct bt_conn *conn, enum bt_security_err err);
+void bt_conn_security_changed(struct bt_conn *conn, uint8_t hci_err,
+			      enum bt_security_err err);
 #endif /* CONFIG_BT_SMP || CONFIG_BT_BREDR */
 
 /* Prepare a PDU to be sent over a connection */

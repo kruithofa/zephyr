@@ -33,13 +33,10 @@ GDATA(_sw_isr_table)
 
 GTEXT(_isr_wrapper)
 SECTION_FUNC(TEXT, _isr_wrapper)
-	z_arm64_enter_exc
+	z_arm64_enter_exc x0, x1, x2
 
 	/* ++(_kernel->nested) to be checked by arch_is_in_isr() */
-	ldr	x1, =_kernel
-	ldr	x2, [x1, #_kernel_offset_to_nested]
-	add	x2, x2, #1
-	str	x2, [x1, #_kernel_offset_to_nested]
+	inc_nest_counter x0, x1
 
 #ifdef CONFIG_TRACING
 	bl	sys_trace_isr_enter
@@ -80,33 +77,37 @@ SECTION_FUNC(TEXT, _isr_wrapper)
 #endif
 
 	/* --(_kernel->nested) */
-	ldr	x1, =_kernel
-	ldr	x2, [x1, #_kernel_offset_to_nested]
-	sub	x2, x2, #1
-	str	x2, [x1, #_kernel_offset_to_nested]
+	dec_nest_counter x0, x1
 
-	cmp	x2, #0
+	cmp	x1, #0
 	bne	exit
 
-	/* Check if we need to context switch */
-	ldr	x2, [x1, #_kernel_offset_to_current]
-	ldr	x3, [x1, #_kernel_offset_to_ready_q_cache]
-	cmp	x2, x3
+	/*
+	 * z_arch_get_next_switch_handle() is returning:
+	 *
+	 * - The next thread to schedule in x0
+	 * - The current thread in x1. This value is returned using the
+	 *   **old_thread parameter, so we need to make space on the stack for
+	 *   that.
+	 */
+	stp	x1, xzr, [sp, #-16]!
+	mov	x0, sp
+	bl	z_arch_get_next_switch_handle
+	ldp	x1, xzr, [sp], #16
+
+	/*
+	 * x0: 1st thread in the ready queue
+	 * x1: _current thread
+	 */
+	cmp	x0, x1
 	beq	exit
 
 	/* Switch thread */
 	bl	z_arm64_context_switch
 
-	/* We return here in two cases:
-	 *
-	 * - The ISR was taken and no context switch was performed.
-	 * - A context-switch was performed during the ISR in the past and now
-	 *   the thread has been switched in again and we return here from the
-	 *   ret in z_arm64_context_switch() because x30 was saved and restored.
-	 */
 exit:
 #ifdef CONFIG_STACK_SENTINEL
 	bl	z_check_stack_sentinel
 #endif
-	z_arm64_exit_exc
+	z_arm64_exit_exc x0, x1, x2
 

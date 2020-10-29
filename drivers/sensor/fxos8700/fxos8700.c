@@ -15,10 +15,10 @@
 
 LOG_MODULE_REGISTER(FXOS8700, CONFIG_SENSOR_LOG_LEVEL);
 
-int fxos8700_set_odr(struct device *dev, const struct sensor_value *val)
+int fxos8700_set_odr(const struct device *dev, const struct sensor_value *val)
 {
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 	int32_t dr = val->val1;
 
 #ifdef CONFIG_FXOS8700_MODE_HYBRID
@@ -71,12 +71,12 @@ int fxos8700_set_odr(struct device *dev, const struct sensor_value *val)
 				   FXOS8700_CTRLREG1_DR_MASK, (uint8_t)dr);
 }
 
-static int fxos8700_set_mt_ths(struct device *dev,
+static int fxos8700_set_mt_ths(const struct device *dev,
 			       const struct sensor_value *val)
 {
 #ifdef CONFIG_FXOS8700_MOTION
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 	uint64_t micro_ms2 = abs(val->val1 * 1000000LL + val->val2);
 	uint64_t ths = micro_ms2 / FXOS8700_FF_MT_THS_SCALE;
 
@@ -95,7 +95,7 @@ static int fxos8700_set_mt_ths(struct device *dev,
 #endif
 }
 
-static int fxos8700_attr_set(struct device *dev,
+static int fxos8700_attr_set(const struct device *dev,
 			     enum sensor_channel chan,
 			     enum sensor_attribute attr,
 			     const struct sensor_value *val)
@@ -115,10 +115,11 @@ static int fxos8700_attr_set(struct device *dev,
 	return 0;
 }
 
-static int fxos8700_sample_fetch(struct device *dev, enum sensor_channel chan)
+static int fxos8700_sample_fetch(const struct device *dev,
+				 enum sensor_channel chan)
 {
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 	uint8_t buffer[FXOS8700_MAX_NUM_BYTES];
 	uint8_t num_bytes;
 	int16_t *raw;
@@ -231,11 +232,12 @@ static void fxos8700_temp_convert(struct sensor_value *val, int8_t raw)
 }
 #endif
 
-static int fxos8700_channel_get(struct device *dev, enum sensor_channel chan,
+static int fxos8700_channel_get(const struct device *dev,
+				enum sensor_channel chan,
 				struct sensor_value *val)
 {
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 	int start_channel;
 	int num_channels;
 	int16_t *raw;
@@ -339,10 +341,10 @@ static int fxos8700_channel_get(struct device *dev, enum sensor_channel chan,
 	return ret;
 }
 
-int fxos8700_get_power(struct device *dev, enum fxos8700_power *power)
+int fxos8700_get_power(const struct device *dev, enum fxos8700_power *power)
 {
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 	uint8_t val = *power;
 
 	if (i2c_reg_read_byte(data->i2c, config->i2c_address,
@@ -357,10 +359,10 @@ int fxos8700_get_power(struct device *dev, enum fxos8700_power *power)
 	return 0;
 }
 
-int fxos8700_set_power(struct device *dev, enum fxos8700_power power)
+int fxos8700_set_power(const struct device *dev, enum fxos8700_power power)
 {
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 
 	return i2c_reg_update_byte(data->i2c, config->i2c_address,
 				   FXOS8700_REG_CTRLREG1,
@@ -368,12 +370,12 @@ int fxos8700_set_power(struct device *dev, enum fxos8700_power power)
 				   power);
 }
 
-static int fxos8700_init(struct device *dev)
+static int fxos8700_init(const struct device *dev)
 {
-	const struct fxos8700_config *config = dev->config_info;
-	struct fxos8700_data *data = dev->driver_data;
+	const struct fxos8700_config *config = dev->config;
+	struct fxos8700_data *data = dev->data;
 	struct sensor_value odr = {.val1 = 6, .val2 = 250000};
-	struct device *rst;
+	const struct device *rst;
 
 	/* Get the I2C device */
 	data->i2c = device_get_binding(config->i2c_name);
@@ -585,6 +587,11 @@ static const struct fxos8700_config fxos8700_config = {
 	.pulse_tmlt = CONFIG_FXOS8700_PULSE_TMLT,
 	.pulse_ltcy = CONFIG_FXOS8700_PULSE_LTCY,
 	.pulse_wind = CONFIG_FXOS8700_PULSE_WIND,
+#endif
+#ifdef CONFIG_FXOS8700_MAG_VECM
+	.mag_vecm_cfg = CONFIG_FXOS8700_MAG_VECM_CFG,
+	.mag_vecm_ths[0] = CONFIG_FXOS8700_MAG_VECM_THS_MSB,
+	.mag_vecm_ths[1] = CONFIG_FXOS8700_MAG_VECM_THS_LSB,
 #endif
 };
 

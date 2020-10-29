@@ -73,7 +73,7 @@ static uint8_t bat_status = LWM2M_DEVICE_BATTERY_STATUS_CHARGING;
 static int mem_free = 15;
 static int mem_total = 25;
 
-static struct device *led_dev;
+static const struct device *led_dev;
 static uint32_t led_state;
 
 static struct lwm2m_ctx client;
@@ -188,7 +188,7 @@ static void *temperature_get_buf(uint16_t obj_inst_id, uint16_t res_id,
 {
 	/* Last read temperature value, will use 25.5C if no sensor available */
 	static struct float32_value v = { 25, 500000 };
-	struct device *dev = NULL;
+	const struct device *dev = NULL;
 
 #if defined(CONFIG_FXOS8700_TEMP)
 	dev = device_get_binding(DT_LABEL(DT_INST(0, nxp_fxos8700)));
@@ -281,11 +281,14 @@ static int lwm2m_setup(void)
 	/* Mark 1st instance of security object as a bootstrap server */
 	lwm2m_engine_set_u8("0/0/1", 1);
 
-	/* Create 2nd instance of server and security objects needed for
-	 * bootstrap process
-	 */
+	/* Create 2nd instance of security object needed for bootstrap */
 	lwm2m_engine_create_obj_inst("0/1");
-	lwm2m_engine_create_obj_inst("1/1");
+#else
+	/* Match Security object instance with a Server object instance with
+	 * Short Server ID.
+	 */
+	lwm2m_engine_set_u16("0/0/10", 101);
+	lwm2m_engine_set_u16("1/0/0", 101);
 #endif
 
 	/* setup SERVER object */
@@ -320,6 +323,7 @@ static int lwm2m_setup(void)
 	/* add power source resource instances */
 	lwm2m_engine_create_res_inst("3/0/6/0");
 	lwm2m_engine_set_res_data("3/0/6/0", &bat_idx, sizeof(bat_idx), 0);
+
 	lwm2m_engine_create_res_inst("3/0/7/0");
 	lwm2m_engine_set_res_data("3/0/7/0", &bat_mv, sizeof(bat_mv), 0);
 	lwm2m_engine_create_res_inst("3/0/8/0");
@@ -419,6 +423,8 @@ static void rd_client_event(struct lwm2m_ctx *client,
 
 void main(void)
 {
+	uint32_t flags = IS_ENABLED(CONFIG_LWM2M_RD_CLIENT_SUPPORT_BOOTSTRAP) ?
+				LWM2M_RD_CLIENT_FLAG_BOOTSTRAP : 0;
 	int ret;
 
 	LOG_INF(APP_BANNER);
@@ -457,10 +463,10 @@ void main(void)
 		sprintf(&dev_str[i*2], "%02x", dev_id[i]);
 	}
 
-	lwm2m_rd_client_start(&client, dev_str, rd_client_event);
+	lwm2m_rd_client_start(&client, dev_str, flags, rd_client_event);
 #else
 	/* client.sec_obj_inst is 0 as a starting point */
-	lwm2m_rd_client_start(&client, CONFIG_BOARD, rd_client_event);
+	lwm2m_rd_client_start(&client, CONFIG_BOARD, flags, rd_client_event);
 #endif
 
 	k_sem_take(&quit_lock, K_FOREVER);

@@ -7,7 +7,7 @@
 #include <logging/log_output.h>
 #include <logging/log_ctrl.h>
 #include <logging/log.h>
-#include <assert.h>
+#include <sys/__assert.h>
 #include <ctype.h>
 #include <time.h>
 #include <stdio.h>
@@ -174,6 +174,7 @@ static int timestamp_print(const struct log_output *log_output,
 	if (!format) {
 		length = print_formatted(log_output, "[%08lu] ", timestamp);
 	} else if (freq != 0U) {
+		uint32_t total_seconds;
 		uint32_t remainder;
 		uint32_t seconds;
 		uint32_t hours;
@@ -182,7 +183,8 @@ static int timestamp_print(const struct log_output *log_output,
 		uint32_t us;
 
 		timestamp /= timestamp_div;
-		seconds = timestamp / freq;
+		total_seconds = timestamp / freq;
+		seconds = total_seconds;
 		hours = seconds / 3600U;
 		seconds -= hours * 3600U;
 		mins = seconds / 60U;
@@ -199,7 +201,7 @@ static int timestamp_print(const struct log_output *log_output,
 			struct tm *tm;
 			time_t time;
 
-			time = seconds;
+			time = total_seconds;
 			tm = gmtime(&time);
 
 			strftime(time_str, sizeof(time_str), "%FT%T", tm);
@@ -227,9 +229,9 @@ static void color_print(const struct log_output *log_output,
 			bool color, bool start, uint32_t level)
 {
 	if (color) {
-		const char *color = start && (colors[level] != NULL) ?
+		const char *log_color = start && (colors[level] != NULL) ?
 				colors[level] : LOG_COLOR_CODE_DEFAULT;
-		print_formatted(log_output, "%s", color);
+		print_formatted(log_output, "%s", log_color);
 	}
 }
 
@@ -500,12 +502,12 @@ static uint32_t prefix_print(const struct log_output *log_output,
 			log_output->control_block->hostname ?
 			log_output->control_block->hostname :
 			"zephyr");
-
 	} else {
 		color_prefix(log_output, colors_on, level);
-		length += ids_print(log_output, level_on, func_on,
-				    domain_id, source_id, level);
 	}
+
+	length += ids_print(log_output, level_on, func_on,
+			domain_id, source_id, level);
 
 	return length;
 }
@@ -656,14 +658,15 @@ void log_output_dropped_process(const struct log_output *log_output, uint32_t cn
 	static const char postfix[] =
 			" messages dropped ---\r\n" DROPPED_COLOR_POSTFIX;
 	log_output_func_t outf = log_output->func;
-	struct device *dev = (struct device *)log_output->control_block->ctx;
 
 	cnt = MIN(cnt, 9999);
 	len = snprintk(buf, sizeof(buf), "%d", cnt);
 
-	buffer_write(outf, (uint8_t *)prefix, sizeof(prefix) - 1, dev);
-	buffer_write(outf, buf, len, dev);
-	buffer_write(outf, (uint8_t *)postfix, sizeof(postfix) - 1, dev);
+	buffer_write(outf, (uint8_t *)prefix, sizeof(prefix) - 1,
+		     log_output->control_block->ctx);
+	buffer_write(outf, buf, len, log_output->control_block->ctx);
+	buffer_write(outf, (uint8_t *)postfix, sizeof(postfix) - 1,
+		     log_output->control_block->ctx);
 }
 
 void log_output_timestamp_freq_set(uint32_t frequency)

@@ -57,8 +57,8 @@ BUILD_ASSERT((SHM_START_ADDR + SHM_SIZE - SHM_BASE_ADDRESS)
 
 /* End of configuration defines */
 
-static struct device *ipm_tx_handle;
-static struct device *ipm_rx_handle;
+static const struct device *ipm_tx_handle;
+static const struct device *ipm_rx_handle;
 
 static metal_phys_addr_t shm_physmap[] = { SHM_START_ADDR };
 static struct metal_device shm_device = {
@@ -123,7 +123,8 @@ static void ipm_callback_process(struct k_work *work)
 	virtqueue_notification(vq[1]);
 }
 
-static void ipm_callback(void *context, uint32_t id, volatile void *data)
+static void ipm_callback(const struct device *dev, void *context,
+			 uint32_t id, volatile void *data)
 {
 	LOG_INF("Got callback of id %u", id);
 	k_work_submit(&ipm_work);
@@ -434,6 +435,7 @@ void main(void)
 	k_thread_create(&tx_thread_data, tx_thread_stack,
 			K_THREAD_STACK_SIZEOF(tx_thread_stack), tx_thread,
 			NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
+	k_thread_name_set(&tx_thread_data, "HCI rpmsg TX");
 
 	while (1) {
 		struct net_buf *buf;

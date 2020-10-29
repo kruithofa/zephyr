@@ -256,6 +256,28 @@ class KconfigCheck(ComplianceTest):
         except subprocess.CalledProcessError as ex:
             self.error(ex.output)
 
+    def write_kconfig_soc(self):
+        """
+        Write KConfig soc files to be sourced during Kconfig parsing
+
+        """
+
+        soc_defconfig_file = os.path.join(tempfile.gettempdir(), "Kconfig.soc.defconfig")
+        soc_file = os.path.join(tempfile.gettempdir(), "Kconfig.soc")
+        soc_arch_file = os.path.join(tempfile.gettempdir(), "Kconfig.soc.arch")
+        try:
+            with open(soc_defconfig_file, 'w', encoding="utf-8") as fp:
+                fp.write(f'osource "{ZEPHYR_BASE}/soc/$(ARCH)/*/Kconfig.defconfig"\n')
+
+            with open(soc_file, 'w', encoding="utf-8") as fp:
+                fp.write(f'osource "{ZEPHYR_BASE}/soc/$(ARCH)/*/Kconfig.soc"\n')
+
+            with open(soc_arch_file, 'w', encoding="utf-8") as fp:
+                fp.write(f'osource "{ZEPHYR_BASE}/soc/$(ARCH)/Kconfig"\n\
+osource "{ZEPHYR_BASE}/soc/$(ARCH)/*/Kconfig"\n')
+        except IOError as ex:
+            self.error(ex.output)
+
     def parse_kconfig(self):
         """
         Returns a kconfiglib.Kconfig object for the Kconfig files. We reuse
@@ -284,7 +306,7 @@ class KconfigCheck(ComplianceTest):
         os.environ["ARCH_DIR"] = "arch/"
         os.environ["BOARD_DIR"] = "boards/*/*"
         os.environ["ARCH"] = "*"
-        os.environ["CMAKE_BINARY_DIR"] = tempfile.gettempdir()
+        os.environ["KCONFIG_BINARY_DIR"] = tempfile.gettempdir()
         os.environ['DEVICETREE_CONF'] = "dummy"
 
         # Older name for DEVICETREE_CONF, for compatibility with older Zephyr
@@ -293,6 +315,9 @@ class KconfigCheck(ComplianceTest):
 
         # For multi repo support
         self.get_modules(os.path.join(tempfile.gettempdir(), "Kconfig.modules"))
+
+        # For list of SOC_ROOT support
+        self.write_kconfig_soc()
 
         # Tells Kconfiglib to generate warnings for all references to undefined
         # symbols within Kconfig files
@@ -523,51 +548,6 @@ UNDEF_KCONFIG_WHITELIST = {
     "USE_STDC_",
     "WHATEVER",
 }
-
-
-class DeviceTreeCheck(ComplianceTest):
-    """
-    Runs the dtlib and edtlib test suites in scripts/dts/.
-    """
-    name = "Devicetree"
-    doc = "See https://docs.zephyrproject.org/latest/guides/dts/index.html for more details"
-    path_hint = ZEPHYR_BASE
-
-    def run(self):
-        if not ZEPHYR_BASE:
-            self.skip("Not a Zephyr tree (ZEPHYR_BASE unset)")
-
-        scripts_path = os.path.join(ZEPHYR_BASE, "scripts", "dts")
-
-        sys.path.insert(0, scripts_path)
-        import testdtlib
-        import testedtlib
-
-        # Hack: The test suites expect to be run from the scripts/dts
-        # directory, because they compare repr() output that contains relative
-        # paths against an expected string. Temporarily change the working
-        # directory to scripts/dts/.
-        #
-        # Warning: This is not thread-safe, though the test suites run in a
-        # fraction of a second.
-        old_dir = os.getcwd()
-        os.chdir(scripts_path)
-        try:
-            logger.info("cd %s && ./testdtlib.py", scripts_path)
-            testdtlib.run()
-            logger.info("cd %s && ./testedtlib.py", scripts_path)
-            testedtlib.run()
-        except SystemExit as e:
-            # The dtlib and edtlib test suites call sys.exit() on failure,
-            # which raises SystemExit. Let any errors in the test scripts
-            # themselves trickle through and turn into an internal CI error.
-            self.add_failure(str(e))
-        except Exception as e:
-            # Report other exceptions as an internal test failure
-            self.error(str(e))
-        finally:
-            # Restore working directory
-            os.chdir(old_dir)
 
 
 class Codeowners(ComplianceTest):

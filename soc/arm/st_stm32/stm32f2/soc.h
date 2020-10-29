@@ -21,8 +21,7 @@
 
 #include <stm32f2xx.h>
 
-/* Add include for DTS generated information */
-#include <devicetree.h>
+#include <st_stm32_dt.h>
 
 #ifdef CONFIG_EXTI_STM32
 #include <stm32f2xx_ll_exti.h>
@@ -59,6 +58,10 @@
 
 #ifdef CONFIG_ADC_STM32
 #include <stm32f2xx_ll_adc.h>
+#endif
+
+#ifdef CONFIG_DAC_STM32
+#include <stm32f2xx_ll_dac.h>
 #endif
 
 #ifdef CONFIG_DMA_STM32

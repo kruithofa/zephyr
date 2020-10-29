@@ -29,8 +29,8 @@
 
 #include "../util.h"
 
-static K_THREAD_STACK_DEFINE(tx_stack, 256);
-static K_THREAD_STACK_DEFINE(rx_stack, 256);
+static K_KERNEL_STACK_DEFINE(tx_stack, 256);
+static K_KERNEL_STACK_DEFINE(rx_stack, 256);
 
 static struct k_thread tx_thread_data;
 static struct k_thread rx_thread_data;
@@ -43,6 +43,7 @@ static struct k_delayed_work retx_work;
 #define HCI_ACLDATA_PKT		0x02
 #define HCI_SCODATA_PKT		0x03
 #define HCI_EVENT_PKT		0x04
+#define HCI_ISODATA_PKT		0x05
 #define HCI_3WIRE_LINK_PKT	0x0f
 #define HCI_VENDOR_PKT		0xff
 
@@ -52,6 +53,7 @@ static bool reliable_packet(uint8_t type)
 	case HCI_COMMAND_PKT:
 	case HCI_ACLDATA_PKT:
 	case HCI_EVENT_PKT:
+	case HCI_ISODATA_PKT:
 		return true;
 	default:
 		return false;
@@ -125,7 +127,7 @@ static const uint8_t conf_rsp[] = { 0x04, 0x7b };
 #define SIG_BUF_SIZE (BT_BUF_RESERVE + MAX_SIG_LEN)
 NET_BUF_POOL_DEFINE(h5_pool, SIGNAL_COUNT, SIG_BUF_SIZE, 0, NULL);
 
-static struct device *h5_dev;
+static const struct device *h5_dev;
 
 static void h5_reset_rx(void)
 {
@@ -394,6 +396,7 @@ static void h5_process_complete_packet(uint8_t *hdr)
 		break;
 	case HCI_EVENT_PKT:
 	case HCI_ACLDATA_PKT:
+	case HCI_ISODATA_PKT:
 		hexdump("=> ", buf->data, buf->len);
 		bt_recv(buf);
 		break;
@@ -405,7 +408,7 @@ static inline struct net_buf *get_evt_buf(uint8_t evt)
 	return bt_buf_get_evt(evt, false, K_NO_WAIT);
 }
 
-static void bt_uart_isr(struct device *unused)
+static void bt_uart_isr(const struct device *unused, void *user_data)
 {
 	static int remaining;
 	uint8_t byte;
@@ -413,6 +416,7 @@ static void bt_uart_isr(struct device *unused)
 	static uint8_t hdr[4];
 
 	ARG_UNUSED(unused);
+	ARG_UNUSED(user_data);
 
 	while (uart_irq_update(h5_dev) &&
 	       uart_irq_is_pending(h5_dev)) {
@@ -471,6 +475,17 @@ static void bt_uart_isr(struct device *unused)
 				break;
 			case HCI_ACLDATA_PKT:
 				h5.rx_buf = bt_buf_get_rx(BT_BUF_ACL_IN,
+							  K_NO_WAIT);
+				if (!h5.rx_buf) {
+					BT_WARN("No available data buffers");
+					h5_reset_rx();
+					continue;
+				}
+
+				h5.rx_state = PAYLOAD;
+				break;
+			case HCI_ISODATA_PKT:
+				h5.rx_buf = bt_buf_get_rx(BT_BUF_ISO_IN,
 							  K_NO_WAIT);
 				if (!h5.rx_buf) {
 					BT_WARN("No available data buffers");
@@ -571,6 +586,9 @@ static int h5_queue(struct net_buf *buf)
 		break;
 	case BT_BUF_ACL_OUT:
 		type = HCI_ACLDATA_PKT;
+		break;
+	case BT_BUF_ISO_OUT:
+		type = HCI_ISODATA_PKT;
 		break;
 	default:
 		BT_ERR("Unknown packet type %u", bt_buf_get_type(buf));
@@ -699,7 +717,7 @@ static void h5_init(void)
 	/* TX thread */
 	k_fifo_init(&h5.tx_queue);
 	k_thread_create(&tx_thread_data, tx_stack,
-			K_THREAD_STACK_SIZEOF(tx_stack),
+			K_KERNEL_STACK_SIZEOF(tx_stack),
 			(k_thread_entry_t)tx_thread, NULL, NULL, NULL,
 			K_PRIO_COOP(CONFIG_BT_HCI_TX_PRIO),
 			0, K_NO_WAIT);
@@ -707,7 +725,7 @@ static void h5_init(void)
 
 	k_fifo_init(&h5.rx_queue);
 	k_thread_create(&rx_thread_data, rx_stack,
-			K_THREAD_STACK_SIZEOF(rx_stack),
+			K_KERNEL_STACK_SIZEOF(rx_stack),
 			(k_thread_entry_t)rx_thread, NULL, NULL, NULL,
 			K_PRIO_COOP(CONFIG_BT_RX_PRIO),
 			0, K_NO_WAIT);
@@ -746,7 +764,7 @@ static const struct bt_hci_driver drv = {
 	.send		= h5_queue,
 };
 
-static int bt_uart_init(struct device *unused)
+static int bt_uart_init(const struct device *unused)
 {
 	ARG_UNUSED(unused);
 

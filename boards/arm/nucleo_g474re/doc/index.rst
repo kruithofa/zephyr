@@ -113,7 +113,11 @@ The Zephyr nucleo_g474re board configuration supports the following hardware fea
 +-----------+------------+-------------------------------------+
 | I2C       | on-chip    | i2c                                 |
 +-----------+------------+-------------------------------------+
+| WATCHDOG  | on-chip    | independent watchdog                |
++-----------+------------+-------------------------------------+
 | PWM       | on-chip    | pwm                                 |
++-----------+------------+-------------------------------------+
+| ADC       | on-chip    | adc                                 |
 +-----------+------------+-------------------------------------+
 
 Other hardware features are not yet supported on this Zephyr port.
@@ -158,6 +162,7 @@ Default Zephyr Peripheral Mapping:
 - LD2 : PA5
 - USB DM : PA11
 - USB DP : PA12
+- ADC1_IN1 : PA0
 
 System Clock
 ------------
@@ -195,6 +200,7 @@ the following pyocd command:
 
 .. code-block:: console
 
+   $ pyocd pack --update
    $ pyocd pack --install stm32g474re
 
 Note:

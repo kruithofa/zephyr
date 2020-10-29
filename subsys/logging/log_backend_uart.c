@@ -8,25 +8,27 @@
 #include <logging/log_core.h>
 #include <logging/log_msg.h>
 #include <logging/log_output.h>
-#include "log_backend_std.h"
+#include <logging/log_backend_std.h>
 #include <device.h>
 #include <drivers/uart.h>
-#include <assert.h>
+#include <sys/__assert.h>
+
+static const struct device *uart_dev;
 
 static int char_out(uint8_t *data, size_t length, void *ctx)
 {
-	struct device *dev = (struct device *)ctx;
+	ARG_UNUSED(ctx);
 
 	for (size_t i = 0; i < length; i++) {
-		uart_poll_out(dev, data[i]);
+		uart_poll_out(uart_dev, data[i]);
 	}
 
 	return length;
 }
 
-static uint8_t buf;
+static uint8_t uart_output_buf;
 
-LOG_OUTPUT_DEFINE(log_output, char_out, &buf, 1);
+LOG_OUTPUT_DEFINE(log_output_uart, char_out, &uart_output_buf, 1);
 
 static void put(const struct log_backend *const backend,
 		struct log_msg *msg)
@@ -34,29 +36,25 @@ static void put(const struct log_backend *const backend,
 	uint32_t flag = IS_ENABLED(CONFIG_LOG_BACKEND_UART_SYST_ENABLE) ?
 		LOG_OUTPUT_FLAG_FORMAT_SYST : 0;
 
-	log_backend_std_put(&log_output, flag, msg);
+	log_backend_std_put(&log_output_uart, flag, msg);
 }
 
 static void log_backend_uart_init(void)
 {
-	struct device *dev;
-
-	dev = device_get_binding(CONFIG_UART_CONSOLE_ON_DEV_NAME);
-	assert(dev);
-
-	log_output_ctx_set(&log_output, dev);
+	uart_dev = device_get_binding(CONFIG_UART_CONSOLE_ON_DEV_NAME);
+	__ASSERT_NO_MSG((void *)uart_dev);
 }
 
 static void panic(struct log_backend const *const backend)
 {
-	log_backend_std_panic(&log_output);
+	log_backend_std_panic(&log_output_uart);
 }
 
 static void dropped(const struct log_backend *const backend, uint32_t cnt)
 {
 	ARG_UNUSED(backend);
 
-	log_backend_std_dropped(&log_output, cnt);
+	log_backend_std_dropped(&log_output_uart, cnt);
 }
 
 static void sync_string(const struct log_backend *const backend,
@@ -66,7 +64,7 @@ static void sync_string(const struct log_backend *const backend,
 	uint32_t flag = IS_ENABLED(CONFIG_LOG_BACKEND_UART_SYST_ENABLE) ?
 		LOG_OUTPUT_FLAG_FORMAT_SYST : 0;
 
-	log_backend_std_sync_string(&log_output, flag, src_level,
+	log_backend_std_sync_string(&log_output_uart, flag, src_level,
 				    timestamp, fmt, ap);
 }
 
@@ -77,7 +75,7 @@ static void sync_hexdump(const struct log_backend *const backend,
 	uint32_t flag = IS_ENABLED(CONFIG_LOG_BACKEND_UART_SYST_ENABLE) ?
 		LOG_OUTPUT_FLAG_FORMAT_SYST : 0;
 
-	log_backend_std_sync_hexdump(&log_output, flag, src_level,
+	log_backend_std_sync_hexdump(&log_output_uart, flag, src_level,
 				     timestamp, metadata, data, length);
 }
 

@@ -13,7 +13,6 @@ LOG_MODULE_REGISTER(adc_mchp_xec);
 #include <drivers/adc.h>
 #include <soc.h>
 #include <errno.h>
-#include <assert.h>
 
 #define ADC_CONTEXT_USES_KERNEL_TIMER
 #include "adc_context.h"
@@ -76,7 +75,7 @@ static void adc_context_update_buffer_pointer(struct adc_context *ctx,
 	}
 }
 
-static int adc_xec_channel_setup(struct device *dev,
+static int adc_xec_channel_setup(const struct device *dev,
 				 const struct adc_channel_cfg *channel_cfg)
 {
 	struct adc_xec_regs *adc_regs = ADC_XEC_REG_BASE;
@@ -146,11 +145,11 @@ static bool adc_xec_validate_buffer_size(const struct adc_sequence *sequence)
 	return true;
 }
 
-static int adc_xec_start_read(struct device *dev,
+static int adc_xec_start_read(const struct device *dev,
 			      const struct adc_sequence *sequence)
 {
 	struct adc_xec_regs *adc_regs = ADC_XEC_REG_BASE;
-	struct adc_xec_data *data = dev->driver_data;
+	struct adc_xec_data *data = dev->data;
 	uint32_t reg;
 
 	if (sequence->channels & ~BIT_MASK(MCHP_ADC_MAX_CHAN)) {
@@ -191,10 +190,10 @@ static int adc_xec_start_read(struct device *dev,
 	return adc_context_wait_for_completion(&data->ctx);
 }
 
-static int adc_xec_read(struct device *dev,
+static int adc_xec_read(const struct device *dev,
 			const struct adc_sequence *sequence)
 {
-	struct adc_xec_data *data = dev->driver_data;
+	struct adc_xec_data *data = dev->data;
 	int error;
 
 	adc_context_lock(&data->ctx, false, NULL);
@@ -205,11 +204,11 @@ static int adc_xec_read(struct device *dev,
 }
 
 #if defined(CONFIG_ADC_ASYNC)
-static int adc_xec_read_async(struct device *dev,
+static int adc_xec_read_async(const struct device *dev,
 			      const struct adc_sequence *sequence,
 			      struct k_poll_signal *async)
 {
-	struct adc_xec_data *data = dev->driver_data;
+	struct adc_xec_data *data = dev->data;
 	int error;
 
 	adc_context_lock(&data->ctx, true, async);
@@ -220,10 +219,10 @@ static int adc_xec_read_async(struct device *dev,
 }
 #endif /* CONFIG_ADC_ASYNC */
 
-static void xec_adc_get_sample(struct device *dev)
+static void xec_adc_get_sample(const struct device *dev)
 {
 	struct adc_xec_regs *adc_regs = ADC_XEC_REG_BASE;
-	struct adc_xec_data *data = dev->driver_data;
+	struct adc_xec_data *data = dev->data;
 	uint32_t idx;
 	uint32_t channels = adc_regs->status_reg;
 	uint32_t ch_status = channels;
@@ -251,10 +250,10 @@ static void xec_adc_get_sample(struct device *dev)
 	adc_regs->status_reg = ch_status;
 }
 
-static void adc_xec_isr(struct device *dev)
+static void adc_xec_isr(const struct device *dev)
 {
 	struct adc_xec_regs *adc_regs = ADC_XEC_REG_BASE;
-	struct adc_xec_data *data = dev->driver_data;
+	struct adc_xec_data *data = dev->data;
 	uint32_t reg;
 
 	/* Clear START_SINGLE bit and clear SINGLE_DONE_STATUS */
@@ -282,10 +281,10 @@ struct adc_driver_api adc_xec_api = {
 	.ref_internal = XEC_ADC_VREF_ANALOG,
 };
 
-static int adc_xec_init(struct device *dev)
+static int adc_xec_init(const struct device *dev)
 {
 	struct adc_xec_regs *adc_regs = ADC_XEC_REG_BASE;
-	struct adc_xec_data *data = dev->driver_data;
+	struct adc_xec_data *data = dev->data;
 
 	adc_regs->control_reg =  XEC_ADC_CTRL_ACTIVATE
 		| XEC_ADC_CTRL_POWER_SAVER_DIS

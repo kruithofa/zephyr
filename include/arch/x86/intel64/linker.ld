@@ -9,9 +9,12 @@
 #define ROMABLE_REGION RAM
 #define RAMABLE_REGION RAM
 
-#ifdef CONFIG_X86_MMU
-	#define MMU_PAGE_SIZE	KB(4)
-	#define MMU_PAGE_ALIGN	. = ALIGN(MMU_PAGE_SIZE);
+/* Used to align areas with separate memory permission characteristics
+ * so that the page permissions can be set in the MMU. Without this,
+ * the kernel is just one blob with the same RWX permissions on all RAM
+ */
+#ifdef CONFIG_SRAM_REGION_PERMISSIONS
+	#define MMU_PAGE_ALIGN	. = ALIGN(CONFIG_MMU_PAGE_SIZE);
 #else
 	#define MMU_PAGE_ALIGN
 #endif
@@ -26,7 +29,7 @@ SECTIONS
 	 * ... there is no 16-bit code yet, but there will be when we add SMP.
 	 */
 
-	.locore 0x8000 : ALIGN(16)
+	.locore : ALIGN(16)
 	{
 	_locore_start = .;
 	*(.locore)
@@ -69,7 +72,7 @@ SECTIONS
 
 	MMU_PAGE_ALIGN
 	_lodata_end = .;
-	}
+	} > LOCORE
 
 	_locore_size = _lorodata_start - _locore_start;
 	_lorodata_size = _lodata_start - _lorodata_start;
@@ -153,12 +156,7 @@ SECTIONS
 
 	__bss_num_dwords = (__bss_end - __bss_start) >> 2;
 
-	SECTION_PROLOGUE(_NOINIT_SECTION_NAME, (NOLOAD), ALIGN(16))
-	{
-	*(.noinit)
-	*(.noinit.*)
-	#include <snippets-noinit.ld>
-	} GROUP_DATA_LINK_IN(RAMABLE_REGION, RAMABLE_REGION)
+#include <linker/common-noinit.ld>
 
 #include <snippets-sections.ld>
 
@@ -172,10 +170,11 @@ SECTIONS
 #include <snippets-ram-sections.ld>
 #include <linker/common-ram.ld>
 #include <linker/cplusplus-ram.ld>
+#include <arch/x86/pagetables.ld>
+
+/* Must be last in RAM */
 #include <linker/kobject.ld>
 
-	. = ALIGN(8);
-	MMU_PAGE_ALIGN
 	_image_ram_end = .;
 	_end = .;
 

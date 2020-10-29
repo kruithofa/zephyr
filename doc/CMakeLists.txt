@@ -42,6 +42,8 @@ endif()
 # Include version info
 include(${ZEPHYR_BASE}/cmake/version.cmake)
 # Process modules
+set(KCONFIG_BINARY_DIR ${CMAKE_BINARY_DIR}/Kconfig)
+file(MAKE_DIRECTORY ${KCONFIG_BINARY_DIR})
 include(${ZEPHYR_BASE}/cmake/zephyr_module.cmake)
 
 # Note that this won't force fatal error if latexmk is not found.
@@ -138,6 +140,8 @@ add_custom_target(
 
 # For incremental builds not to miss any source change this MUST be kept
 # a superset of INPUT= and FILE_PATTERNS= in zephyr.doxyfile.in
+#
+# NOTE: any changes here should be reflected in .github/workflows/doc-build.yml
 file(GLOB_RECURSE  DOXY_SOURCES
   ${ZEPHYR_BASE}/include/*.[c,h,S]
   ${ZEPHYR_BASE}/kernel/include/kernel_arch_interface.h
@@ -195,6 +199,17 @@ else()
   set(SEP :)
 endif()
 
+file(WRITE ${KCONFIG_BINARY_DIR}/Kconfig.soc.defconfig
+     "osource \"${ZEPHYR_BASE}/soc/$(ARCH)/*/Kconfig.defconfig\"\n"
+)
+file(WRITE ${KCONFIG_BINARY_DIR}/Kconfig.soc
+     "osource \"${ZEPHYR_BASE}/soc/$(ARCH)/*/Kconfig.soc\"\n"
+)
+file(WRITE ${KCONFIG_BINARY_DIR}/Kconfig.soc.arch
+     "osource \"${ZEPHYR_BASE}/soc/$(ARCH)/Kconfig\"\n"
+     "osource \"${ZEPHYR_BASE}/soc/$(ARCH)/*/Kconfig\"\n"
+)
+
 add_custom_target(
   kconfig
   COMMAND ${CMAKE_COMMAND} -E make_directory ${RST_OUT}/doc/reference/kconfig
@@ -206,7 +221,7 @@ add_custom_target(
   ARCH=*
   ARCH_DIR=arch
   SOC_DIR=soc
-  CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
+  KCONFIG_BINARY_DIR=${KCONFIG_BINARY_DIR}
   KCONFIG_WARN_UNDEF=y
   KCONFIG_TURBO_MODE=${KCONFIG_TURBO_MODE}
   KCONFIG_DOC_MODE=1
@@ -246,10 +261,11 @@ set(SPHINX_BUILD_HTML_COMMAND
 add_custom_target(
   sphinx-html
   COMMAND ${SPHINX_BUILD_HTML_COMMAND}
-  DEPENDS ${EXTRACT_CONTENT_OUTPUTS}
   COMMENT "Just re-generating HTML (USE WITH CAUTION)"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   USES_TERMINAL
 )
+add_dependencies(sphinx-html content)
 
 # "breathe", the sphinx plugin that parses XML output from doxygen, has
 # an "everything on everything" dependency issue reported at:
@@ -281,10 +297,12 @@ set(SPHINX_BUILD_LATEX_COMMAND
 add_custom_target(
   sphinx-latex
   COMMAND ${SPHINX_BUILD_LATEX_COMMAND}
-  DEPENDS ${EXTRACT_CONTENT_OUTPUTS}
   COMMENT "Just re-generating LaTeX (USE WITH CAUTION)"
+  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
   USES_TERMINAL
 )
+add_dependencies(sphinx-latex content)
+
 
 add_custom_command(
   OUTPUT ${SPHINX_OUTPUT_DIR_LATEX}/zephyr.tex

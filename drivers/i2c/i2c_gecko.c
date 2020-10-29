@@ -21,9 +21,9 @@ LOG_MODULE_REGISTER(i2c_gecko);
 #include "i2c-priv.h"
 
 #define DEV_CFG(dev) \
-	((const struct i2c_gecko_config * const)(dev)->config_info)
+	((const struct i2c_gecko_config * const)(dev)->config)
 #define DEV_DATA(dev) \
-	((struct i2c_gecko_data * const)(dev)->driver_data)
+	((struct i2c_gecko_data * const)(dev)->data)
 #define DEV_BASE(dev) \
 	((I2C_TypeDef *)(DEV_CFG(dev))->base)
 
@@ -46,7 +46,7 @@ struct i2c_gecko_data {
 	uint32_t dev_config;
 };
 
-void i2c_gecko_config_pins(struct device *dev,
+void i2c_gecko_config_pins(const struct device *dev,
 			   const struct soc_gpio_pin *pin_sda,
 			   const struct soc_gpio_pin *pin_scl)
 {
@@ -60,12 +60,22 @@ void i2c_gecko_config_pins(struct device *dev,
 	base->ROUTEPEN = I2C_ROUTEPEN_SDAPEN | I2C_ROUTEPEN_SCLPEN;
 	base->ROUTELOC0 = (config->loc_sda << _I2C_ROUTELOC0_SDALOC_SHIFT) |
 			  (config->loc_scl << _I2C_ROUTELOC0_SCLLOC_SHIFT);
+#elif defined(GPIO_I2C_ROUTEEN_SCLPEN) && defined(GPIO_I2C_ROUTEEN_SDAPEN)
+	GPIO->I2CROUTE[I2C_NUM(base)].ROUTEEN = GPIO_I2C_ROUTEEN_SCLPEN |
+		GPIO_I2C_ROUTEEN_SDAPEN;
+	GPIO->I2CROUTE[I2C_NUM(base)].SCLROUTE =
+		(config->pin_scl.pin << _GPIO_I2C_SCLROUTE_PIN_SHIFT) |
+		(config->pin_scl.port << _GPIO_I2C_SCLROUTE_PORT_SHIFT);
+	GPIO->I2CROUTE[I2C_NUM(base)].SDAROUTE =
+		(config->pin_sda.pin << _GPIO_I2C_SDAROUTE_PIN_SHIFT) |
+		(config->pin_sda.port << _GPIO_I2C_SDAROUTE_PORT_SHIFT);
 #else
 	base->ROUTE = I2C_ROUTE_SDAPEN | I2C_ROUTE_SCLPEN | (config->loc << 8);
 #endif
 }
 
-static int i2c_gecko_configure(struct device *dev, uint32_t dev_config_raw)
+static int i2c_gecko_configure(const struct device *dev,
+			       uint32_t dev_config_raw)
 {
 	I2C_TypeDef *base = DEV_BASE(dev);
 	struct i2c_gecko_data *data = DEV_DATA(dev);
@@ -98,7 +108,7 @@ static int i2c_gecko_configure(struct device *dev, uint32_t dev_config_raw)
 	return 0;
 }
 
-static int i2c_gecko_transfer(struct device *dev, struct i2c_msg *msgs,
+static int i2c_gecko_transfer(const struct device *dev, struct i2c_msg *msgs,
 			      uint8_t num_msgs, uint16_t addr)
 {
 	I2C_TypeDef *base = DEV_BASE(dev);
@@ -162,7 +172,7 @@ finish:
 	return ret;
 }
 
-static int i2c_gecko_init(struct device *dev)
+static int i2c_gecko_init(const struct device *dev)
 {
 	const struct i2c_gecko_config *config = DEV_CFG(dev);
 	uint32_t bitrate_cfg;

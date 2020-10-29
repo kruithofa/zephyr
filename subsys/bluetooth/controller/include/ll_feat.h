@@ -94,6 +94,18 @@
  * Core Spec V5.2 Volume 6, Part B, chapter 4.6
  */
 
+#if defined(CONFIG_BT_CTLR_ADV_PERIODIC) || \
+	defined(CONFIG_BT_CTLR_SYNC_PERIODIC)
+#define LL_FEAT_BIT_PER_ADV BIT64(BT_LE_FEAT_BIT_PER_ADV)
+#else /* !CONFIG_BT_CTLR_ADV_PERIODIC && !CONFIG_BT_CTLR_SYNC_PERIODIC */
+#define LL_FEAT_BIT_PER_ADV 0
+#endif /* !CONFIG_BT_CTLR_ADV_PERIODIC && !CONFIG_BT_CTLR_SYNC_PERIODIC */
+
+/*
+ * LL_FEAT_BIT_MASK_VALID is defined as per
+ * Core Spec V5.2 Volume 6, Part B, chapter 4.6
+ */
+>>>>>>> 7621b12272... Bluetooth: controller: llcp: Feature Exchange compliance with BTLE V5.0+
 #define LL_FEAT_BIT_MASK         0x1FFFF
 #define LL_FEAT_BIT_MASK_VALID   0x1CF2F
 #define LL_FEAT_FILTER_OCTET0    0x1FF00
@@ -110,5 +122,6 @@
 				  LL_FEAT_BIT_SMI_RX | \
 				  LL_FEAT_BIT_PHY_CODED | \
 				  LL_FEAT_BIT_EXT_ADV | \
+				  LL_FEAT_BIT_PER_ADV | \
 				  LL_FEAT_BIT_CHAN_SEL_2 | \
 				  LL_FEAT_BIT_MIN_USED_CHAN)

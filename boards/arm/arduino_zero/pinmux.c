@@ -8,10 +8,10 @@
 #include <drivers/pinmux.h>
 #include <soc.h>
 
-static int board_pinmux_init(struct device *dev)
+static int board_pinmux_init(const struct device *dev)
 {
-	struct device *muxa = device_get_binding(DT_LABEL(DT_NODELABEL(pinmux_a)));
-	struct device *muxb = device_get_binding(DT_LABEL(DT_NODELABEL(pinmux_b)));
+	const struct device *muxa = device_get_binding(DT_LABEL(DT_NODELABEL(pinmux_a)));
+	const struct device *muxb = device_get_binding(DT_LABEL(DT_NODELABEL(pinmux_b)));
 
 	ARG_UNUSED(dev);
 
@@ -75,6 +75,10 @@ static int board_pinmux_init(struct device *dev)
 	pinmux_pin_set(muxa, 24, PINMUX_FUNC_G);
 #endif
 
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(dac0), okay) && defined(CONFIG_DAC_SAM0)
+	/* DAC on PA02 */
+	pinmux_pin_set(muxa, 2, PINMUX_FUNC_B);
+#endif
 	return 0;
 }
 

@@ -8,6 +8,7 @@
 #include <logging/log_core.h>
 #include <logging/log_msg.h>
 #include <logging/log_output.h>
+#include <sys/byteorder.h>
 #include <sys/ring_buffer.h>
 
 static struct ring_buf ringbuf;
@@ -40,7 +41,6 @@ static void trace(const uint8_t *data, size_t length)
 	static uint16_t log_id;
 	volatile uint8_t *t, *region;
 	int space;
-	int i;
 
 	space = ring_buf_space_get(&ringbuf);
 	if (space < CONFIG_LOG_BACKEND_RB_SLOT_SIZE) {
@@ -57,15 +57,23 @@ static void trace(const uint8_t *data, size_t length)
 	region = t;
 
 	/* Add magic number at the beginning of the slot */
-	*(uint16_t *)t = magic;
+	sys_put_le16(magic, (uint8_t *)t);
 	t += 2;
 
 	/* Add log id */
-	*(uint16_t *)t = log_id++;
+	sys_put_le16(log_id++, (uint8_t *)t);
 	t += 2;
 
-	for (i = 0; i < MIN(length, CONFIG_LOG_BACKEND_RB_SLOT_SIZE - 4); i++) {
-		*t++ = data[i];
+	length = MIN(length, CONFIG_LOG_BACKEND_RB_SLOT_SIZE - 4);
+
+	memcpy((void *)t, data, length);
+	t += length;
+
+	/* Clear logging slot */
+	if (IS_ENABLED(CONFIG_LOG_BACKEND_RB_CLEAR) &&
+	    length < CONFIG_LOG_BACKEND_RB_SLOT_SIZE - 4) {
+		memset((void *)t, 0,
+		       CONFIG_LOG_BACKEND_RB_SLOT_SIZE - 4 - length);
 	}
 
 	SOC_DCACHE_FLUSH((void *)region, CONFIG_LOG_BACKEND_RB_SLOT_SIZE);
@@ -81,36 +89,40 @@ static int char_out(uint8_t *data, size_t length, void *ctx)
 }
 
 /* magic and log id takes space */
-static uint8_t buf[CONFIG_LOG_BACKEND_RB_SLOT_SIZE - 4];
+static uint8_t rb_log_buf[CONFIG_LOG_BACKEND_RB_SLOT_SIZE - 4];
 
-LOG_OUTPUT_DEFINE(log_output, char_out, buf, sizeof(buf));
+LOG_OUTPUT_DEFINE(log_output_rb, char_out, rb_log_buf, sizeof(rb_log_buf));
 
 static void put(const struct log_backend *const backend,
 		struct log_msg *msg)
 {
-	log_msg_get(msg);
-
 	uint32_t flags = LOG_OUTPUT_FLAG_LEVEL;
 
-	if (IS_ENABLED(CONFIG_LOG_BACKEND_FORMAT_TIMESTAMP)) {
-		flags |= LOG_OUTPUT_FLAG_FORMAT_TIMESTAMP;
+	log_msg_get(msg);
+
+	if (IS_ENABLED(CONFIG_LOG_BACKEND_RB_TIMESTAMP)) {
+		flags |= LOG_OUTPUT_FLAG_TIMESTAMP;
+
+		if (IS_ENABLED(CONFIG_LOG_BACKEND_FORMAT_TIMESTAMP)) {
+			flags |= LOG_OUTPUT_FLAG_FORMAT_TIMESTAMP;
+		}
 	}
 
-	log_output_msg_process(&log_output, msg, flags);
+	log_output_msg_process(&log_output_rb, msg, flags);
 
 	log_msg_put(msg);
 }
 
 static void panic(struct log_backend const *const backend)
 {
-	log_output_flush(&log_output);
+	log_output_flush(&log_output_rb);
 }
 
 static void dropped(const struct log_backend *const backend, uint32_t cnt)
 {
 	ARG_UNUSED(backend);
 
-	log_output_dropped_process(&log_output, cnt);
+	log_output_dropped_process(&log_output_rb, cnt);
 }
 
 static void sync_string(const struct log_backend *const backend,
@@ -120,12 +132,17 @@ static void sync_string(const struct log_backend *const backend,
 	uint32_t flags = LOG_OUTPUT_FLAG_LEVEL;
 	uint32_t key;
 
-	if (IS_ENABLED(CONFIG_LOG_BACKEND_FORMAT_TIMESTAMP)) {
-		flags |= LOG_OUTPUT_FLAG_FORMAT_TIMESTAMP;
+	if (IS_ENABLED(CONFIG_LOG_BACKEND_RB_TIMESTAMP)) {
+		flags |= LOG_OUTPUT_FLAG_TIMESTAMP;
+
+		if (IS_ENABLED(CONFIG_LOG_BACKEND_FORMAT_TIMESTAMP)) {
+			flags |= LOG_OUTPUT_FLAG_FORMAT_TIMESTAMP;
+		}
 	}
 
 	key = irq_lock();
-	log_output_string(&log_output, src_level, timestamp, fmt, ap, flags);
+	log_output_string(&log_output_rb, src_level,
+			  timestamp, fmt, ap, flags);
 	irq_unlock(key);
 }
 
@@ -133,20 +150,24 @@ static void sync_hexdump(const struct log_backend *const backend,
 			 struct log_msg_ids src_level, uint32_t timestamp,
 			 const char *metadata, const uint8_t *data, uint32_t length)
 {
-	uint32_t flags = LOG_OUTPUT_FLAG_LEVEL | LOG_OUTPUT_FLAG_TIMESTAMP;
+	uint32_t flags = LOG_OUTPUT_FLAG_LEVEL;
 	uint32_t key;
 
-	if (IS_ENABLED(CONFIG_LOG_BACKEND_FORMAT_TIMESTAMP)) {
-		flags |= LOG_OUTPUT_FLAG_FORMAT_TIMESTAMP;
+	if (IS_ENABLED(CONFIG_LOG_BACKEND_RB_TIMESTAMP)) {
+		flags |= LOG_OUTPUT_FLAG_TIMESTAMP;
+
+		if (IS_ENABLED(CONFIG_LOG_BACKEND_FORMAT_TIMESTAMP)) {
+			flags |= LOG_OUTPUT_FLAG_FORMAT_TIMESTAMP;
+		}
 	}
 
 	key = irq_lock();
-	log_output_hexdump(&log_output, src_level, timestamp,
+	log_output_hexdump(&log_output_rb, src_level, timestamp,
 			   metadata, data, length, flags);
 	irq_unlock(key);
 }
 
-const struct log_backend_api log_backend_adsp_api = {
+const struct log_backend_api log_backend_rb_api = {
 	.put = IS_ENABLED(CONFIG_LOG_IMMEDIATE) ? NULL : put,
 	.put_sync_string = IS_ENABLED(CONFIG_LOG_IMMEDIATE) ?
 			sync_string : NULL,
@@ -157,4 +178,4 @@ const struct log_backend_api log_backend_adsp_api = {
 	.dropped = IS_ENABLED(CONFIG_LOG_IMMEDIATE) ? NULL : dropped,
 };
 
-LOG_BACKEND_DEFINE(log_backend_adsp, log_backend_adsp_api, true);
+LOG_BACKEND_DEFINE(log_backend_adsp, log_backend_rb_api, true);
