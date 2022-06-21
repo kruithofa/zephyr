@@ -77,6 +77,7 @@ enum {
 enum {
 	RP_COMMON_STATE_IDLE,
 	RP_COMMON_STATE_WAIT_RX,
+	RP_COMMON_STATE_WAIT_RX_ACK,
 	RP_COMMON_STATE_WAIT_TX,
 	RP_COMMON_STATE_WAIT_TX_ACK,
 	RP_COMMON_STATE_WAIT_NTF,
@@ -821,6 +822,8 @@ static void rp_comm_rx_decode(struct ll_conn *conn, struct proc_ctx *ctx, struct
 		break;
 	case PDU_DATA_LLCTRL_TYPE_TERMINATE_IND:
 		llcp_pdu_decode_terminate_ind(ctx, pdu);
+		/* Make sure no data is tx'ed after RX of terminate ind */
+		llcp_tx_pause_data(conn, LLCP_TX_QUEUE_PAUSE_DATA_TERMINATE);
 		break;
 #if defined(CONFIG_BT_CTLR_DATA_LENGTH)
 	case PDU_DATA_LLCTRL_TYPE_LENGTH_REQ:
@@ -1051,12 +1054,8 @@ static void rp_comm_send_rsp(struct ll_conn *conn, struct proc_ctx *ctx, uint8_t
 		break;
 #endif /* CONFIG_BT_CTLR_MIN_USED_CHAN && CONFIG_BT_CENTRAL */
 	case PROC_TERMINATE:
-		/* No response */
-		llcp_rr_complete(conn);
-		ctx->state = RP_COMMON_STATE_IDLE;
-
-		/* Mark the connection for termination */
-		conn->llcp_terminate.reason_final = ctx->data.term.error_code;
+		/* No response, await 'ack of rx' (ie. on next prepare/ull_cp_run() ) */
+		ctx->state = RP_COMMON_STATE_WAIT_RX_ACK;
 		break;
 #if defined(CONFIG_BT_CTLR_DATA_LENGTH)
 	case PROC_DATA_LENGTH_UPDATE:
@@ -1095,6 +1094,24 @@ static void rp_comm_st_wait_rx(struct ll_conn *conn, struct proc_ctx *ctx, uint8
 	case RP_COMMON_EVT_REQUEST:
 		rp_comm_rx_decode(conn, ctx, (struct pdu_data *)param);
 		rp_comm_send_rsp(conn, ctx, evt, param);
+		break;
+	default:
+		/* Ignore other evts */
+		break;
+	}
+}
+
+static void rp_comm_st_wait_rx_ack(struct ll_conn *conn, struct proc_ctx *ctx, uint8_t evt,
+				   void *param)
+{
+	switch (evt) {
+	case RP_COMMON_EVT_RUN:
+		LL_ASSERT(ctx->proc == PROC_TERMINATE);
+		llcp_rr_complete(conn);
+		ctx->state = RP_COMMON_STATE_IDLE;
+
+		/* Mark the connection for termination */
+		conn->llcp_terminate.reason_final = ctx->data.term.error_code;
 		break;
 	default:
 		/* Ignore other evts */
@@ -1180,6 +1197,9 @@ static void rp_comm_execute_fsm(struct ll_conn *conn, struct proc_ctx *ctx, uint
 		break;
 	case RP_COMMON_STATE_WAIT_RX:
 		rp_comm_st_wait_rx(conn, ctx, evt, param);
+		break;
+	case RP_COMMON_STATE_WAIT_RX_ACK:
+		rp_comm_st_wait_rx_ack(conn, ctx, evt, param);
 		break;
 	case RP_COMMON_STATE_WAIT_TX:
 		rp_comm_st_wait_tx(conn, ctx, evt, param);
