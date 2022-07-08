@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 #include "kconfig.h"
 
 #include <zephyr/bluetooth/hci.h>
@@ -47,7 +47,7 @@ struct ll_conn conn;
  * Note API and internal test are not yet split out here
  */
 
-void test_api_init(void)
+ZTEST(public, test_api_init)
 {
 	ull_cp_init();
 	ull_tx_q_init(&conn.tx_q);
@@ -58,14 +58,7 @@ void test_api_init(void)
 	zassert_true(rr_is_disconnected(&conn), NULL);
 }
 
-extern void test_int_mem_proc_ctx(void);
-extern void test_int_mem_tx(void);
-extern void test_int_create_proc(void);
-extern void test_int_llcp_init(void);
-extern void test_int_local_pending_requests(void);
-extern void test_int_remote_pending_requests(void);
-
-void test_api_connect(void)
+ZTEST(public, test_api_connect)
 {
 	ull_cp_init();
 	ull_tx_q_init(&conn.tx_q);
@@ -76,7 +69,7 @@ void test_api_connect(void)
 	zassert_true(rr_is_idle(&conn), NULL);
 }
 
-void test_api_disconnect(void)
+ZTEST(public, test_api_disconnect)
 {
 	ull_cp_init();
 	ull_tx_q_init(&conn.tx_q);
@@ -95,7 +88,7 @@ void test_api_disconnect(void)
 	zassert_true(rr_is_disconnected(&conn), NULL);
 }
 
-void test_int_disconnect_loc(void)
+ZTEST(internal, test_int_disconnect_loc)
 {
 	uint64_t err;
 	int nr_free_ctx;
@@ -152,7 +145,7 @@ void test_int_disconnect_loc(void)
 	ut_rx_q_is_empty();
 }
 
-void test_int_disconnect_rem(void)
+ZTEST(internal, test_int_disconnect_rem)
 {
 	int nr_free_ctx;
 	struct pdu_data_llctrl_version_ind remote_version_ind = {
@@ -203,7 +196,7 @@ void test_int_disconnect_rem(void)
 
 #define SIZE 2
 
-void test_int_pause_resume_data_path(void)
+ZTEST(internal, test_int_pause_resume_data_path)
 {
 	struct node_tx *node;
 	struct node_tx nodes[SIZE] = { 0 };
@@ -340,22 +333,5 @@ void test_int_pause_resume_data_path(void)
 	zassert_equal_ptr(node, NULL, "");
 }
 
-void test_main(void)
-{
-	ztest_test_suite(internal,
-			 ztest_unit_test(test_int_mem_proc_ctx),
-			 ztest_unit_test(test_int_mem_tx),
-			 ztest_unit_test(test_int_create_proc),
-			 ztest_unit_test(test_int_llcp_init),
-			 ztest_unit_test(test_int_local_pending_requests),
-			 ztest_unit_test(test_int_remote_pending_requests),
-			 ztest_unit_test(test_int_disconnect_loc),
-			 ztest_unit_test(test_int_disconnect_rem),
-			 ztest_unit_test(test_int_pause_resume_data_path));
-
-	ztest_test_suite(public, ztest_unit_test(test_api_init), ztest_unit_test(test_api_connect),
-			 ztest_unit_test(test_api_disconnect));
-
-	ztest_run_test_suite(internal);
-	ztest_run_test_suite(public);
-}
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(public, NULL, NULL, NULL, NULL, NULL);

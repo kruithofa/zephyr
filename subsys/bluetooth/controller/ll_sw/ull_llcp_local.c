@@ -514,7 +514,7 @@ bool lr_is_idle(struct ll_conn *conn)
 	return conn->llcp.local.state == LR_STATE_IDLE;
 }
 
-void test_int_local_pending_requests(void)
+ZTEST (internal, test_int_local_pending_requests)
 {
 	struct ll_conn conn;
 	struct proc_ctx *peek_ctx;

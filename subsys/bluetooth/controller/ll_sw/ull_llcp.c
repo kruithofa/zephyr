@@ -1730,7 +1730,7 @@ uint8_t common_tx_buffer_alloc_count(void)
 }
 #endif /* LLCP_TX_CTRL_BUF_QUEUE_ENABLE */
 
-void test_int_mem_proc_ctx(void)
+ZTEST(internal, test_int_mem_proc_ctx)
 {
 	struct proc_ctx *ctx1;
 	struct proc_ctx *ctx2;
@@ -1767,7 +1767,7 @@ void test_int_mem_proc_ctx(void)
 	zassert_not_null(ctx1, NULL);
 }
 
-void test_int_mem_tx(void)
+ZTEST(internal, test_int_mem_tx)
 {
 	bool peek;
 #if defined(LLCP_TX_CTRL_BUF_QUEUE_ENABLE)
@@ -1832,7 +1832,7 @@ void test_int_mem_tx(void)
 	}
 }
 
-void test_int_create_proc(void)
+ZTEST(internal, test_int_create_proc)
 {
 	struct proc_ctx *ctx;
 
@@ -1852,7 +1852,7 @@ void test_int_create_proc(void)
 	zassert_is_null(ctx, NULL);
 }
 
-void test_int_llcp_init(void)
+ZTEST (internal, test_int_llcp_init)
 {
 	struct ll_conn conn;
 
