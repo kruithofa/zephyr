@@ -3,3 +3,4 @@ common:
 tests:
   bluetooth.controller.ctrl_collision.test:
      type: unit
+     extra_args: CONFIG_ZTEST_NEW_API=y

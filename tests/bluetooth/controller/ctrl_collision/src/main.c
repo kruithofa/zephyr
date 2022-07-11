@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 #include "kconfig.h"
 
 #define ULL_LLCP_UNITTEST
@@ -90,7 +90,7 @@ struct pdu_data_llctrl_conn_param_rsp conn_param_rsp = { .interval_min = INTVL_M
 
 struct pdu_data_llctrl_conn_param_req *req_B = &conn_param_req_B;
 
-static void setup(void)
+static void collision_setup(void *data)
 {
 	test_setup(&conn);
 
@@ -146,7 +146,7 @@ static bool is_instant_reached(struct ll_conn *conn, uint16_t instant)
 }
 
 
-void test_phy_update_central_loc_collision(void)
+ZTEST(collision, test_phy_update_central_loc_collision)
 {
 	uint8_t err;
 	struct node_tx *tx;
@@ -315,7 +315,7 @@ void test_phy_update_central_loc_collision(void)
 				  "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_phy_update_central_rem_collision(void)
+ZTEST(collision, test_phy_update_central_rem_collision)
 {
 	uint8_t err;
 	struct node_tx *tx;
@@ -478,7 +478,7 @@ void test_phy_update_central_rem_collision(void)
 				  "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_phy_update_periph_loc_collision(void)
+ZTEST(collision, test_phy_update_periph_loc_collision)
 {
 	uint8_t err;
 	struct node_tx *tx;
@@ -602,7 +602,7 @@ void test_phy_update_periph_loc_collision(void)
 				  "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_phy_conn_update_central_loc_collision(void)
+ZTEST(collision, test_phy_conn_update_central_loc_collision)
 {
 	uint8_t err;
 	struct node_tx *tx;
@@ -740,19 +740,11 @@ void test_phy_conn_update_central_loc_collision(void)
 		      "Free CTX buffers %d", ctx_buffers_free());
 }
 
-
-void test_main(void)
-{
-	ztest_test_suite(
-		collision,
-		ztest_unit_test_setup_teardown(test_phy_update_central_loc_collision, setup,
-					       unit_test_noop),
-		ztest_unit_test_setup_teardown(test_phy_update_central_rem_collision, setup,
-					       unit_test_noop),
-		ztest_unit_test_setup_teardown(test_phy_update_periph_loc_collision, setup,
-					       unit_test_noop),
-		ztest_unit_test_setup_teardown(test_phy_conn_update_central_loc_collision, setup,
-					       unit_test_noop));
-
-	ztest_run_test_suite(collision);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(collision, NULL, NULL, collision_setup, NULL, NULL);
