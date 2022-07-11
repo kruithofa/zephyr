@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 #include "kconfig.h"
 
 #include <bluetooth/hci.h>
@@ -43,7 +43,7 @@
 
 struct ll_conn conn;
 
-static void setup(void)
+static void cis_create_setup(void *data)
 {
 	test_setup(&conn);
 }
@@ -113,7 +113,7 @@ static struct pdu_data_llctrl_cis_ind remote_cis_ind = {
  *    |      LE CIS ESTABLISHED   |                           |
  *    |<--------------------------|                           |
  */
-static void test_cc_create_periph_rem_host_accept(void)
+ZTEST(cis_create, test_cc_create_periph_rem_host_accept)
 {
 	struct node_tx *tx;
 	struct node_rx_pdu *ntf;
@@ -242,7 +242,7 @@ static void test_cc_create_periph_rem_host_accept(void)
  *    |                           |-------------------------->|
  *    |                           |                           |
  */
-static void test_cc_create_periph_rem_host_reject(void)
+ZTEST(cis_create, test_cc_create_periph_rem_host_reject)
 {
 	struct node_tx *tx;
 	struct node_rx_pdu *ntf;
@@ -316,7 +316,7 @@ static void test_cc_create_periph_rem_host_reject(void)
  *    |                           |-------------------------->|
  *    |                           |                           |
  */
-static void test_cc_create_periph_rem_host_accept_to(void)
+ZTEST(cis_create, test_cc_create_periph_rem_host_accept_to)
 {
 	struct node_tx *tx;
 	struct node_rx_pdu *ntf;
@@ -392,7 +392,7 @@ static void test_cc_create_periph_rem_host_accept_to(void)
  *    |                 |------------------------------>|
  *    |                 |                               |
  */
-static void test_cc_create_periph_rem_invalid_phy(void)
+ZTEST(cis_create, test_cc_create_periph_rem_invalid_phy)
 {
 	static struct pdu_data_llctrl_cis_req remote_cis_req_invalid_phy = {
 		.cig_id           =   0x01,
@@ -451,18 +451,11 @@ static void test_cc_create_periph_rem_invalid_phy(void)
 		      "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_main(void)
-{
-	ztest_test_suite(
-		cis_create,
-		ztest_unit_test_setup_teardown(test_cc_create_periph_rem_host_accept, setup,
-					       unit_test_noop),
-		ztest_unit_test_setup_teardown(test_cc_create_periph_rem_host_reject, setup,
-					       unit_test_noop),
-		ztest_unit_test_setup_teardown(test_cc_create_periph_rem_host_accept_to, setup,
-					       unit_test_noop),
-		ztest_unit_test_setup_teardown(test_cc_create_periph_rem_invalid_phy, setup,
-					       unit_test_noop));
-
-	ztest_run_test_suite(cis_create);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(cis_create, NULL, NULL, cis_create_setup, NULL, NULL);
