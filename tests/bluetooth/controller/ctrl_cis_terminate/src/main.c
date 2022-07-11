@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 #include "kconfig.h"
 
 #include <bluetooth/hci.h>
@@ -43,7 +43,7 @@
 
 struct ll_conn conn;
 
-static void setup(void)
+static void cis_term_setup(void *data)
 {
 	test_setup(&conn);
 }
@@ -74,17 +74,17 @@ static void test_cis_terminate_rem(uint8_t role)
 		      "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_cis_terminate_cen_rem(void)
+ZTEST(cis_terminate, test_cis_terminate_cen_rem)
 {
 	test_cis_terminate_rem(BT_HCI_ROLE_CENTRAL);
 }
 
-void test_cis_terminate_per_rem(void)
+ZTEST(cis_terminate, test_cis_terminate_per_rem)
 {
 	test_cis_terminate_rem(BT_HCI_ROLE_PERIPHERAL);
 }
 
-void test_cis_terminate_loc(uint8_t role)
+static void test_cis_terminate_loc(uint8_t role)
 {
 	uint8_t err;
 	struct node_tx *tx;
@@ -147,24 +147,21 @@ void test_cis_terminate_loc(uint8_t role)
 		      "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_cis_terminate_cen_loc(void)
+ZTEST(cis_terminate, test_cis_terminate_cen_loc)
 {
 	test_cis_terminate_loc(BT_HCI_ROLE_CENTRAL);
 }
 
-void test_cis_terminate_per_loc(void)
+ZTEST(cis_terminate, test_cis_terminate_per_loc)
 {
 	test_cis_terminate_loc(BT_HCI_ROLE_PERIPHERAL);
 }
 
-void test_main(void)
-{
-	ztest_test_suite(
-		cis_term,
-		ztest_unit_test_setup_teardown(test_cis_terminate_cen_rem, setup, unit_test_noop),
-		ztest_unit_test_setup_teardown(test_cis_terminate_per_rem, setup, unit_test_noop),
-		ztest_unit_test_setup_teardown(test_cis_terminate_cen_loc, setup, unit_test_noop),
-		ztest_unit_test_setup_teardown(test_cis_terminate_per_loc, setup, unit_test_noop));
-
-	ztest_run_test_suite(cis_term);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(cis_terminate, NULL, NULL, cis_term_setup, NULL, NULL);
