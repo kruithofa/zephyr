@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/sys/byteorder.h>
@@ -40,9 +40,9 @@
 #include "helper_pdu.h"
 #include "helper_util.h"
 
-struct ll_conn test_conn;
+static struct ll_conn test_conn;
 
-static void setup(void)
+static void setup(void *data)
 {
 	test_setup(&test_conn);
 }
@@ -112,7 +112,7 @@ static void lt_tx_invalid_pdu_size(enum helper_pdu_opcode opcode, int adj_size)
 		      "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_invalid_pdu_ignore_rx(void)
+ZTEST(invalid, test_invalid_pdu_ignore_rx)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -179,11 +179,11 @@ void test_invalid_pdu_ignore_rx(void)
 	lt_tx_invalid_pdu_size(LL_CTE_RSP, 1);
 }
 
-void test_main(void)
-{
-	ztest_test_suite(invalid,
-			 ztest_unit_test_setup_teardown(test_invalid_pdu_ignore_rx, setup,
-							unit_test_noop));
-
-	ztest_run_test_suite(invalid);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(invalid, NULL, NULL, setup, NULL, NULL);
