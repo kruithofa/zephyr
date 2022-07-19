@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +28,7 @@ struct ccm {
 
 #define SIZE 10U
 
-void test_init(void)
+ZTEST(tx_queue, test_init)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -46,7 +46,7 @@ void test_init(void)
  * Dequeue and verify order of the ctrl nodes from (1).
  * Verify Tx Queue is empty.
  */
-void test_ctrl(void)
+ZTEST(tx_queue, test_ctrl)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -75,7 +75,7 @@ void test_ctrl(void)
  * Dequeue and verify order of the data nodes from (1).
  * Verify Tx Queue is empty.
  */
-void test_data(void)
+ZTEST(tx_queue, test_data)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -104,7 +104,7 @@ void test_data(void)
  * Dequeue and verify order of the data and ctrl nodes from (1).
  * Verify Tx Queue is empty.
  */
-void test_ctrl_and_data_1(void)
+ZTEST(tx_queue, test_ctrl_and_data_1)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -140,7 +140,7 @@ void test_ctrl_and_data_1(void)
  * Dequeue and verify order of the data and ctrl nodes from (1).
  * Verify Tx Queue is empty.
  */
-void test_ctrl_and_data_2(void)
+ZTEST(tx_queue, test_ctrl_and_data_2)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -186,7 +186,7 @@ void test_ctrl_and_data_2(void)
  * Dequeue and verify order of ctrl nodes from (2).
  * Verify Tx Queue is empty.
  */
-void test_ctrl_and_data_3(void)
+ZTEST(tx_queue, test_ctrl_and_data_3)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -242,7 +242,7 @@ void test_ctrl_and_data_3(void)
  * Dequeue and verify order of data nodes from (2).
  * Verify Tx Queue is empty.
  */
-void test_ctrl_and_data_4(void)
+ZTEST(tx_queue, test_ctrl_and_data_4)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -309,7 +309,7 @@ void test_ctrl_and_data_4(void)
  * Dequeue and verify order of ctrl and data nodes from (3).
  * Verify Tx Queue is empty.
  */
-void test_ctrl_and_data_5(void)
+ZTEST(tx_queue, test_ctrl_and_data_5)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -396,7 +396,7 @@ void test_ctrl_and_data_5(void)
  * Resume Tx Queue.
  * Dequeue and verify order of data nodes from (2).
  */
-void test_multiple_pause_resume(void)
+ZTEST(tx_queue, test_multiple_pause_resume)
 {
 	struct ull_tx_q tx_q;
 	struct node_tx *node;
@@ -450,14 +450,11 @@ void test_multiple_pause_resume(void)
 	zassert_equal_ptr(node, NULL, "");
 }
 
-void test_main(void)
-{
-	ztest_test_suite(test, ztest_unit_test(test_init), ztest_unit_test(test_ctrl),
-			 ztest_unit_test(test_data), ztest_unit_test(test_ctrl_and_data_1),
-			 ztest_unit_test(test_ctrl_and_data_2),
-			 ztest_unit_test(test_ctrl_and_data_3),
-			 ztest_unit_test(test_ctrl_and_data_4),
-			 ztest_unit_test(test_ctrl_and_data_5),
-			 ztest_unit_test(test_multiple_pause_resume));
-	ztest_run_test_suite(test);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(tx_queue, NULL, NULL, NULL, NULL, NULL);
