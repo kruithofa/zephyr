@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 #include "kconfig.h"
 
 #define ULL_LLCP_UNITTEST
@@ -47,12 +47,16 @@
 
 static struct ll_conn conn[CONFIG_BT_CTLR_LLCP_CONN];
 
-static void setup(void)
+static void tx_buffer_setup(void *data)
 {
 	ull_conn_init();
-	test_setup(&conn[0]);
+	for (int i =0; i < CONFIG_BT_CTLR_LLCP_CONN; i++)
+	{
+		test_setup(&conn[i]);
+	}
 }
-void test_tx_buffer_alloc(void)
+
+ZTEST(tx_buffer_alloc, test_tx_buffer_alloc)
 {
 	struct proc_ctx *ctxs[CONFIG_BT_CTLR_LLCP_CONN];
 	struct node_tx *tx[CONFIG_BT_CTLR_LLCP_COMMON_TX_CTRL_BUF_NUM +
@@ -60,6 +64,9 @@ void test_tx_buffer_alloc(void)
 	uint16_t tx_alloc_idx = 0;
 	int i;
 
+	if (CONFIG_BT_CTLR_LLCP_PER_CONN_TX_CTRL_BUF_NUM==0) {
+		ztest_test_skip();
+	}
 	for (int ctx_idx = 0; ctx_idx < CONFIG_BT_CTLR_LLCP_CONN; ctx_idx++) {
 		ctxs[ctx_idx] = llcp_create_local_procedure(PROC_VERSION_EXCHANGE);
 	}
@@ -179,11 +186,11 @@ void test_tx_buffer_alloc(void)
 #endif /* LLCP_TX_CTRL_BUF_QUEUE_ENABLE */
 }
 
-void test_main(void)
-{
-	ztest_test_suite(
-		tx_buffer_alloc, ztest_unit_test_setup_teardown(test_tx_buffer_alloc, setup,
-								unit_test_noop));
-
-	ztest_run_test_suite(tx_buffer_alloc);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(tx_buffer_alloc, NULL, NULL, tx_buffer_setup, NULL, NULL);
