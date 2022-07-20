@@ -5,7 +5,7 @@
  */
 
 #include <zephyr/types.h>
-#include <ztest.h>
+#include <zephyr/ztest.h>
 
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/sys/byteorder.h>
@@ -43,7 +43,7 @@
 
 struct ll_conn test_conn;
 
-static void setup(void)
+static void unsupported_setup(void *data)
 {
 	test_setup(&test_conn);
 }
@@ -158,7 +158,7 @@ static void lt_tx_undef_opcode_and_rx_unknown_rsp(uint8_t opcode)
 		      "Free CTX buffers %d", ctx_buffers_free());
 }
 
-void test_invalid_per_rem(void)
+ZTEST(invalid, test_invalid_per_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -186,7 +186,7 @@ void test_invalid_per_rem(void)
 	lt_tx_pdu_and_rx_unknown_rsp(LL_MIN_USED_CHANS_IND);
 }
 
-void test_invalid_cen_rem(void)
+ZTEST(invalid, test_invalid_cen_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_CENTRAL);
@@ -217,7 +217,7 @@ void test_invalid_cen_rem(void)
 	lt_tx_pdu_and_rx_unknown_rsp(LL_PAUSE_ENC_REQ);
 }
 
-void test_undefined_per_rem(void)
+ZTEST(undefined, test_undefined_per_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -232,7 +232,7 @@ void test_undefined_per_rem(void)
 	}
 }
 
-void test_undefined_cen_rem(void)
+ZTEST(undefined, test_undefined_cen_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_CENTRAL);
@@ -248,7 +248,7 @@ void test_undefined_cen_rem(void)
 }
 
 #ifdef CONFIG_BT_CTLR_LE_ENC
-void test_no_enc_per_rem(void)
+ZTEST(unsupported, test_no_enc_per_rem)
 {
 	/* Skip test;
 	 * LE Encryption support is available
@@ -256,7 +256,7 @@ void test_no_enc_per_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_enc_per_rem(void)
+ZTEST(unsupported, test_no_enc_per_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -265,7 +265,7 @@ void test_no_enc_per_rem(void)
 }
 #endif /* CONFIG_BT_CTLR_LE_ENC */
 
-void test_no_enc_cen_rem(void)
+ZTEST(unsupported, test_no_enc_cen_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_CENTRAL);
@@ -274,7 +274,7 @@ void test_no_enc_cen_rem(void)
 }
 
 #if defined(CONFIG_BT_CTLR_PER_INIT_FEAT_XCHG)
-void test_no_per_feat_exch_per_rem(void)
+ZTEST(unsupported, test_no_per_feat_exch_per_rem)
 {
 	/* Skip test;
 	 * Peripheral-initiated Features Exchange support is available
@@ -282,7 +282,7 @@ void test_no_per_feat_exch_per_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_per_feat_exch_per_rem(void)
+ZTEST(unsupported, test_no_per_feat_exch_per_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -292,7 +292,7 @@ void test_no_per_feat_exch_per_rem(void)
 #endif /* CONFIG_BT_CTLR_PER_INIT_FEAT_XCHG */
 
 #if defined(CONFIG_BT_CTLR_PER_INIT_FEAT_XCHG)
-void test_no_per_feat_exch_cen_rem(void)
+ZTEST(unsupported, test_no_per_feat_exch_cen_rem)
 {
 	/* Skip test;
 	 * Peripheral-initiated Features Exchange support is available
@@ -300,7 +300,7 @@ void test_no_per_feat_exch_cen_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_per_feat_exch_cen_rem(void)
+ZTEST(unsupported, test_no_per_feat_exch_cen_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_CENTRAL);
@@ -311,7 +311,7 @@ void test_no_per_feat_exch_cen_rem(void)
 
 
 #if defined(CONFIG_BT_CTLR_CONN_PARAM_REQ)
-void test_no_cpr_per_rem(void)
+ZTEST(unsupported, test_no_cpr_per_rem)
 {
 	/* Skip test;
 	 * Connection Parameters Request procedure support is available
@@ -319,7 +319,7 @@ void test_no_cpr_per_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_cpr_per_rem(void)
+ZTEST(unsupported, test_no_cpr_per_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -329,7 +329,7 @@ void test_no_cpr_per_rem(void)
 #endif /* CONFIG_BT_CTLR_CONN_PARAM_REQ */
 
 #if defined(CONFIG_BT_CTLR_CONN_PARAM_REQ)
-void test_no_cpr_cen_rem(void)
+ZTEST(unsupported, test_no_cpr_cen_rem)
 {
 	/* Skip test;
 	 * Connection Parameters Request procedure support is available
@@ -337,7 +337,7 @@ void test_no_cpr_cen_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_cpr_cen_rem(void)
+ZTEST(unsupported, test_no_cpr_cen_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_CENTRAL);
@@ -348,7 +348,7 @@ void test_no_cpr_cen_rem(void)
 
 
 #if defined(CONFIG_BT_CTLR_PHY)
-void test_no_phy_per_rem(void)
+ZTEST(unsupported, test_no_phy_per_rem)
 {
 	/* Skip test;
 	 * LE 2M PHY support is available
@@ -356,7 +356,7 @@ void test_no_phy_per_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_phy_per_rem(void)
+ZTEST(unsupported, test_no_phy_per_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_PERIPHERAL);
@@ -366,7 +366,7 @@ void test_no_phy_per_rem(void)
 #endif /* CONFIG_BT_CTLR_PHY */
 
 #if defined(CONFIG_BT_CTLR_PHY)
-void test_no_phy_cen_rem(void)
+ZTEST(unsupported, test_no_phy_cen_rem)
 {
 	/* Skip test;
 	 * LE 2M PHY support is available
@@ -374,7 +374,7 @@ void test_no_phy_cen_rem(void)
 	ztest_test_skip();
 }
 #else
-void test_no_phy_cen_rem(void)
+ZTEST(unsupported, test_no_phy_cen_rem)
 {
 	/* Role */
 	test_set_role(&test_conn, BT_HCI_ROLE_CENTRAL);
@@ -384,41 +384,13 @@ void test_no_phy_cen_rem(void)
 #endif /* CONFIG_BT_CTLR_PHY */
 
 
-
-void test_main(void)
-{
-	ztest_test_suite(invalid,
-			 ztest_unit_test_setup_teardown(test_invalid_per_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_invalid_cen_rem, setup,
-							unit_test_noop));
-
-	ztest_test_suite(undefined,
-			 ztest_unit_test_setup_teardown(test_undefined_per_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_undefined_cen_rem, setup,
-							unit_test_noop));
-
-	ztest_test_suite(unsupported,
-			 ztest_unit_test_setup_teardown(test_no_enc_per_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_enc_cen_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_per_feat_exch_per_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_per_feat_exch_cen_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_cpr_per_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_cpr_cen_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_phy_per_rem, setup,
-							unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_no_phy_cen_rem, setup,
-							unit_test_noop)
-			 );
-
-	ztest_run_test_suite(invalid);
-	ztest_run_test_suite(undefined);
-	ztest_run_test_suite(unsupported);
-}
+/*
+ * we can not skip the internal tests,
+ * which are testing static procedures in
+ * ull_llcp_*
+ * therefor we need to repeat them here
+ */
+ZTEST_SUITE(internal, NULL, NULL, NULL, NULL, NULL);
+ZTEST_SUITE(invalid, NULL, NULL, unsupported_setup, NULL, NULL);
+ZTEST_SUITE(undefined, NULL, NULL, unsupported_setup, NULL, NULL);
+ZTEST_SUITE(unsupported, NULL, NULL, unsupported_setup, NULL, NULL);
