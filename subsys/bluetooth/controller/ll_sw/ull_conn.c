@@ -8231,6 +8231,9 @@ void ull_dle_init(struct ll_conn *conn, uint8_t phy)
 	conn->lll.dle.remote.max_rx_time = max_time_min;
 #endif /* CONFIG_BT_CTLR_PHY */
 
+	ull_dle_update_eff(conn);
+
+#ifdef OLD
 	conn->lll.dle.eff.max_tx_octets = PDU_DC_PAYLOAD_SIZE_MIN;
 	conn->lll.dle.eff.max_rx_octets = PDU_DC_PAYLOAD_SIZE_MIN;
 
@@ -8238,6 +8241,7 @@ void ull_dle_init(struct ll_conn *conn, uint8_t phy)
 	conn->lll.dle.eff.max_tx_time = max_time_min;
 	conn->lll.dle.eff.max_rx_time = max_time_min;
 #endif /* CONFIG_BT_CTLR_PHY */
+#endif
 
 
 	/* Check whether the controller should perform a data length update after
