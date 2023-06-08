@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+create a compiler failure
+
 #include <zephyr/types.h>
 
 #include <zephyr/bluetooth/hci.h>
