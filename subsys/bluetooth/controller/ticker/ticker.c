@@ -2918,14 +2918,14 @@ static inline void ticker_job_list_inquire(struct ticker_instance *instance)
  *
  * @internal
  */
-static inline uint8_t
-ticker_job_compare_update(struct ticker_instance *instance,
-			  uint8_t ticker_id_old_head)
+static inline void ticker_job_compare_update(struct ticker_instance *instance,
+					     uint8_t ticker_id_old_head)
+
 {
 	struct ticker_node *ticker;
 	uint32_t ticks_to_expire;
-	uint32_t ctr_curr;
-	uint32_t ctr_prev;
+	uint32_t ctr_post;
+	uint32_t ctr;
 	uint32_t cc;
 	uint32_t i;
 
@@ -2938,7 +2938,7 @@ ticker_job_compare_update(struct ticker_instance *instance,
 			instance->ticks_current = cntr_cnt_get();
 		}
 
-		return 0U;
+		return;
 	}
 
 	/* Check if this is the first update. If so, start the counter */
@@ -2955,13 +2955,6 @@ ticker_job_compare_update(struct ticker_instance *instance,
 	ticker = &instance->nodes[instance->ticker_id_head];
 	ticks_to_expire = ticker->ticks_to_expire;
 
-	/* If ticks_to_expire is zero, then immediately trigger the worker.
-	 * Under BT_TICKER_LOW_LAT, mesh loopback test fails pending
-	 * investigation hence immediate trigger not used for BT_TICKER_LOW_LAT.
-	 */
-	if (!IS_ENABLED(CONFIG_BT_TICKER_LOW_LAT) && !ticks_to_expire) {
-		return 1U;
-	}
 
 	/* Iterate few times, if required, to ensure that compare is
 	 * correctly set to a future value. This is required in case
@@ -2969,38 +2962,29 @@ ticker_job_compare_update(struct ticker_instance *instance,
 	 * ahead of compare value to be set.
 	 */
 	i = 10U;
-	ctr_curr = cntr_cnt_get();
+
 	do {
 		uint32_t ticks_elapsed;
-		uint32_t ticks_diff;
+
 
 		LL_ASSERT(i);
 		i--;
 
+		ctr = cntr_cnt_get();
 		cc = instance->ticks_current;
-		ticks_diff = ticker_ticks_diff_get(ctr_curr, cc);
-		/* Under BT_TICKER_LOW_LAT, bsim test fails, pending
-		 * investigation immediate trigger not used for
-		 * BT_TICKER_LOW_LAT.
-		 */
-		if (!IS_ENABLED(CONFIG_BT_TICKER_LOW_LAT) &&
-		    (ticks_diff >= ticks_to_expire)) {
-			return 1U;
-		}
-
-		ticks_elapsed = ticks_diff + HAL_TICKER_CNTR_CMP_OFFSET_MIN +
+		ticks_elapsed = ticker_ticks_diff_get(ctr, cc) +
+				HAL_TICKER_CNTR_CMP_OFFSET_MIN +
 				HAL_TICKER_CNTR_SET_LATENCY;
 		cc += MAX(ticks_elapsed, ticks_to_expire);
 		cc &= HAL_TICKER_CNTR_MASK;
 		instance->trigger_set_cb(cc);
 
-		ctr_prev = ctr_curr;
-		ctr_curr = cntr_cnt_get();
-	} while ((ticker_ticks_diff_get(ctr_curr, ctr_prev) +
+		ctr_post = cntr_cnt_get();
+	} while ((ticker_ticks_diff_get(ctr_post, ctr) +
 		  HAL_TICKER_CNTR_CMP_OFFSET_MIN) >
-		  ticker_ticks_diff_get(cc, ctr_prev));
+		  ticker_ticks_diff_get(cc, ctr));
 
-	return 0U;
+
 }
 
 /**
@@ -3022,7 +3006,6 @@ void ticker_job(void *param)
 	struct ticker_instance *instance = param;
 	uint8_t flag_compare_update;
 	uint8_t ticker_id_old_head;
-	uint8_t compare_trigger;
 	uint32_t ticks_previous;
 	uint32_t ticks_elapsed;
 	uint8_t flag_elapsed;
@@ -3138,17 +3121,14 @@ void ticker_job(void *param)
 
 	/* update compare if head changed */
 	if (flag_compare_update) {
-		compare_trigger = ticker_job_compare_update(instance,
-							    ticker_id_old_head);
-	} else {
-		compare_trigger = 0U;
+		ticker_job_compare_update(instance, ticker_id_old_head);
 	}
 
 	/* Permit worker to run */
 	instance->job_guard = 0U;
 
 	/* trigger worker if deferred */
-	if (instance->worker_trigger || compare_trigger) {
+	if (instance->worker_trigger) {
 		instance->sched_cb(TICKER_CALL_ID_JOB, TICKER_CALL_ID_WORKER, 1,
 				   instance);
 	}

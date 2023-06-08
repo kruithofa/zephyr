@@ -21,22 +21,22 @@
 /* Active connection in peripheral role with extended scanning on 1M and Coded
  * PHY, scheduling and receiving auxiliary PDUs.
  */
-#define EVENT_OVERHEAD_START_US       458
+#define EVENT_OVERHEAD_START_US       750
 #else /* !CONFIG_BT_CTLR_PHY_CODED */
 /* Active connection in peripheral role with extended scanning on 1M only,
  * scheduling and receiving auxiliary PDUs.
  */
-#define EVENT_OVERHEAD_START_US       428
+#define EVENT_OVERHEAD_START_US       750
 #endif /* !CONFIG_BT_CTLR_PHY_CODED */
 #else /* !CONFIG_BT_OBSERVER */
 /* Active connection in peripheral role with legacy scanning on 1M.
  */
-#define EVENT_OVERHEAD_START_US       275
+#define EVENT_OVERHEAD_START_US       750
 #endif /* !CONFIG_BT_OBSERVER */
 #else /* !CONFIG_BT_CTLR_ADV_EXT */
 /* Active connection in peripheral role with additional advertising state.
  */
-#define EVENT_OVERHEAD_START_US       275
+#define EVENT_OVERHEAD_START_US       750
 #endif /* !CONFIG_BT_CTLR_ADV_EXT */
 
 /* Worst-case time margin needed after event end-time in the air
