@@ -51,7 +51,8 @@
 
 #include "hal/debug.h"
 
-#define PDU_FREE_TIMEOUT K_SECONDS(5)
+#define PDU_FREE_TIMEOUT K_FOREVER
+// was: K_SECONDS(5)
 
 static int init_reset(void);
 static void pdu_free_sem_give(void);
