@@ -418,6 +418,8 @@ struct pdu_adv *lll_adv_pdu_alloc_pdu_adv(void)
 	struct pdu_adv *p;
 	int err;
 
+	LL_ASSERT(CONFIG_BT_CTLR_ADV_DATA_BUF_MAX == 16);
+
 	p = MFIFO_DEQUEUE_PEEK(pdu_free);
 	if (p) {
 		k_sem_reset(&sem_pdu_free);
