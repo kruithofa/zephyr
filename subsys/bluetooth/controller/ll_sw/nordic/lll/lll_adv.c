@@ -51,8 +51,7 @@
 
 #include "hal/debug.h"
 
-#define PDU_FREE_TIMEOUT K_FOREVER
-// was: K_SECONDS(5)
+#define PDU_FREE_TIMEOUT K_SECONDS(5)
 
 static int init_reset(void);
 static void pdu_free_sem_give(void);
@@ -418,8 +417,6 @@ struct pdu_adv *lll_adv_pdu_alloc_pdu_adv(void)
 {
 	struct pdu_adv *p;
 	int err;
-
-	LL_ASSERT(CONFIG_BT_CTLR_ADV_DATA_BUF_MAX == 16);
 
 	p = MFIFO_DEQUEUE_PEEK(pdu_free);
 	if (p) {
