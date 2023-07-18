@@ -27,7 +27,11 @@
 #define BT_AD_DATA_FORMAT_LEN_MAX 255U
 
 /* Device name length, size minus one null character */
-#define BT_DEVICE_NAME_LEN (sizeof(CONFIG_BT_DEVICE_NAME) - 1U)
+#if defined(CONFIG_BT_DEVICE_NAME_DYNAMIC)
+#define BT_DEVICE_NAME_LEN (CONFIG_BT_DEVICE_NAME_MAX + 1U)
+#else
+#define BT_DEVICE_NAME_LEN sizeof(CONFIG_BT_DEVICE_NAME)
+#endif
 
 /* Device name length in AD data format, 2 bytes for length and type overhead */
 #define BT_DEVICE_NAME_AD_DATA_LEN (BT_AD_DATA_FORMAT_LEN_SIZE + \
@@ -75,7 +79,7 @@ int broadcaster_multiple(void)
 		printk("Bluetooth init failed (err %d)\n", err);
 		return err;
 	}
-
+printk("Length: %d\n", BT_DEVICE_NAME_LEN);
 	for (int index = 0; index < CONFIG_BT_EXT_ADV_MAX_ADV_SET; index++) {
 		/* Use advertising set instance index as SID */
 		adv_param.sid = index;

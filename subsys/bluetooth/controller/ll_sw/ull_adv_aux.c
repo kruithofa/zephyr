@@ -391,12 +391,12 @@ uint8_t ll_adv_aux_ad_data_set(uint8_t handle, uint8_t op, uint8_t frag_pref,
 		 */
 
 		val_ptr = hdr_data;
-		*val_ptr++ =  len;
+		*val_ptr++ = len;
 		(void)memcpy(val_ptr, &data, sizeof(data));
 
 		/* Append data to the last PDU */
 		chain_err = ull_adv_aux_pdu_set_clear(adv, pdu_prev, pdu,
-						      (ULL_ADV_PDU_HDR_FIELD_AD_DATA_APPEND),
+						      ULL_ADV_PDU_HDR_FIELD_AD_DATA_APPEND,
 						      0U, hdr_data);
 
 		LL_ASSERT((!chain_err)  || (chain_err == BT_HCI_ERR_PACKET_TOO_LONG));
@@ -413,20 +413,19 @@ uint8_t ll_adv_aux_ad_data_set(uint8_t handle, uint8_t op, uint8_t frag_pref,
 							     ULL_ADV_HDR_DATA_DATA_PTR_SIZE];
 
 			val_ptr = hdr_data;
-			*val_ptr++ =  len;
+			*val_ptr++ = len;
 			(void)memcpy(val_ptr, &data, sizeof(data));
 			val_ptr += sizeof(data);
-			*val_ptr++ =  len;
+			*val_ptr++ = len;
 			(void)memcpy(val_ptr, &data, sizeof(data));
 			chain_err = ull_adv_aux_pdu_set_clear(adv, pdu_prev, pdu,
 							   (ULL_ADV_PDU_HDR_FIELD_AD_DATA_APPEND |
 							    ULL_ADV_PDU_HDR_FIELD_AUX_PTR),
 							    0U, hdr_data);
-			ad_len_overflow =
-				hdr_data[ULL_ADV_HDR_DATA_AUX_PTR_PTR_OFFSET +
-					 ULL_ADV_HDR_DATA_AUX_PTR_PTR_SIZE +
-					 ULL_ADV_HDR_DATA_DATA_PTR_OFFSET +
-					 ULL_ADV_HDR_DATA_DATA_PTR_SIZE];
+			ad_len_overflow = hdr_data[ULL_ADV_HDR_DATA_AUX_PTR_PTR_OFFSET +
+						   ULL_ADV_HDR_DATA_AUX_PTR_PTR_SIZE +
+						   ULL_ADV_HDR_DATA_DATA_PTR_OFFSET +
+						   ULL_ADV_HDR_DATA_DATA_PTR_SIZE];
 
 			/* ad_len_overflow - ad_len_overflow_first_try is the size of
 			 * the AUX_PTR and optional header
@@ -436,7 +435,7 @@ uint8_t ll_adv_aux_ad_data_set(uint8_t handle, uint8_t op, uint8_t frag_pref,
 			/* FIXME: why do we need to subtract the extra bytes,
 			 * is PDU_AC_PAYLOAD_SIZE_MAX wrong?
 			 */
-			ad_len =  PDU_AC_PAYLOAD_SIZE_MAX - ad_len_prev -
+			ad_len = PDU_AC_PAYLOAD_SIZE_MAX - ad_len_prev -
 				(ad_len_overflow - ad_len_overflow_first_try) - 4;
 
 			val_ptr = hdr_data;
@@ -453,17 +452,17 @@ uint8_t ll_adv_aux_ad_data_set(uint8_t handle, uint8_t op, uint8_t frag_pref,
 							   (ULL_ADV_PDU_HDR_FIELD_AD_DATA_APPEND |
 							    ULL_ADV_PDU_HDR_FIELD_AUX_PTR),
 							   0U, hdr_data);
-			LL_ASSERT(chain_err == 0);
+			LL_ASSERT(chain_err == 0U);
 			/*
 			 * in the next PDU we still need to add ad_len_chain bytes of data
 			 * but we do not have overflow, since we already added
 			 * the exact amount that would fit
 			 */
-			ad_len_chain = len-ad_len;
-			ad_len_overflow = 0;
+			ad_len_chain = len - ad_len;
+			ad_len_overflow = 0U;
 
 		} else {
-			ad_len_overflow = 0;
+			ad_len_overflow = 0U;
 		}
 	}
 
@@ -612,11 +611,11 @@ uint8_t ll_adv_aux_ad_data_set(uint8_t handle, uint8_t op, uint8_t frag_pref,
 		pdu_chain->len = sec_len + ad_len_overflow + len;
 
 		/* Fill AD Data in chain PDU */
-		if (ad_len_overflow != 0) {
+		if (ad_len_overflow != 0U) {
 			(void)memcpy(dptr_chain, data, ad_len_overflow);
 		}
-		if (ad_len_chain != 0) {
-			(void)memcpy(dptr_chain, &data[ad_len + ad_len_overflow], len);
+		if (ad_len_chain != 0U) {
+			(void)memcpy(dptr_chain, &data[ad_len + ad_len_overflow], ad_len_chain);
 		}
 		/* Get reference to aux ptr in superior PDU */
 		(void)memcpy(&aux_ptr,

@@ -9,7 +9,11 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
 
-#define NAME_LEN 30
+#if defined(CONFIG_BT_DEVICE_NAME_DYNAMIC)
+#define NAME_LEN (CONFIG_BT_DEVICE_NAME_MAX + 1U)
+#else
+#define NAME_LEN sizeof(CONFIG_BT_DEVICE_NAME)
+#endif
 
 static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 			 struct net_buf_simple *ad)
