@@ -1091,7 +1091,7 @@ static uint32_t ticker_alloc_expire_info(struct ticker_instance *instance, uint8
 			is_last = 1;
 		}
 	}
-
+	LL_ASSERT(status == TICKER_STATUS_SUCCESS);
 	return status;
 }
 
@@ -1937,6 +1937,7 @@ static inline uint8_t ticker_job_list_manage(struct ticker_instance *instance,
 #endif /* CONFIG_BT_TICKER_EXT_EXPIRE_INFO */
 			     (user_op->params.update.lazy == 0U) &&
 			     (user_op->params.update.force == 0U))) {
+				LL_ASSERT(false);
 				ticker_job_op_cb(user_op,
 						 TICKER_STATUS_FAILURE);
 				continue;
@@ -2175,6 +2176,7 @@ static inline void ticker_job_worker_bh(struct ticker_instance *instance,
 			 */
 			if (state && ((state == 1U) || skip_collision) &&
 			    ticker->fp_op_func) {
+				LL_ASSERT(false);
 				ticker->fp_op_func(TICKER_STATUS_FAILURE,
 						   ticker->op_context);
 			}
@@ -2648,6 +2650,7 @@ static inline uint8_t ticker_job_insert(struct ticker_instance *instance,
 				ticker->ticks_to_expire = 0U;
 			}
 		} else {
+			LL_ASSERT(false);
 			return TICKER_STATUS_FAILURE;
 		}
 	}
@@ -2734,6 +2737,7 @@ static inline void ticker_job_list_insert(struct ticker_instance *instance,
 
 				if (((ticker->req -
 				      ticker->ack) & 0xff) != 0U) {
+					LL_ASSERT(false);
 					ticker_job_op_cb(user_op,
 							 TICKER_STATUS_FAILURE);
 					continue;
@@ -2840,6 +2844,7 @@ static inline void ticker_job_op_inquire(struct ticker_instance *instance,
 				uop->params.priority_set.priority;
 			uop->status = TICKER_STATUS_SUCCESS;
 		} else {
+			LL_ASSERT(false);
 			uop->status = TICKER_STATUS_FAILURE;
 		}
 		fp_op_func = uop->fp_op_func;
@@ -3173,6 +3178,7 @@ uint8_t ticker_init(uint8_t instance_index, uint8_t count_node, void *node,
 	struct ticker_user *users;
 
 	if (instance_index >= TICKER_INSTANCE_MAX) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3203,6 +3209,7 @@ uint8_t ticker_init(uint8_t instance_index, uint8_t count_node, void *node,
 	}
 
 	if (count_op) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3403,6 +3410,7 @@ uint8_t ticker_start_us(uint8_t instance_index, uint8_t user_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3523,6 +3531,7 @@ uint8_t ticker_update_ext(uint8_t instance_index, uint8_t user_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3594,6 +3603,7 @@ uint8_t ticker_yield_abs(uint8_t instance_index, uint8_t user_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3647,6 +3657,7 @@ uint8_t ticker_stop(uint8_t instance_index, uint8_t user_id, uint8_t ticker_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3701,6 +3712,7 @@ uint8_t ticker_stop_abs(uint8_t instance_index, uint8_t user_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3783,6 +3795,7 @@ uint8_t ticker_next_slot_get_ext(uint8_t instance_index, uint8_t user_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3850,6 +3863,7 @@ uint8_t ticker_job_idle_get(uint8_t instance_index, uint8_t user_id,
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 
@@ -3910,6 +3924,7 @@ uint8_t ticker_priority_set(uint8_t instance_index, uint8_t user_id, uint8_t tic
 	}
 
 	if (last == user->first) {
+		LL_ASSERT(false);
 		return TICKER_STATUS_FAILURE;
 	}
 

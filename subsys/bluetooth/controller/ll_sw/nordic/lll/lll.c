@@ -831,6 +831,9 @@ static void ticker_stop_op_cb(uint32_t status, void *param)
 static void ticker_start_op_cb(uint32_t status, void *param)
 {
 	ARG_UNUSED(param);
+	if (status != TICKER_STATUS_SUCCESS) {
+		LL_ASSERT(status == TICKER_STATUS_BUSY);
+	}
 	LL_ASSERT(status == TICKER_STATUS_SUCCESS);
 
 	LL_ASSERT(preempt_start_req != preempt_start_ack);
