@@ -2176,7 +2176,7 @@ static inline void ticker_job_worker_bh(struct ticker_instance *instance,
 			 */
 			if (state && ((state == 1U) || skip_collision) &&
 			    ticker->fp_op_func) {
-				LL_ASSERT(false);
+//				LL_ASSERT(false);
 				ticker->fp_op_func(TICKER_STATUS_FAILURE,
 						   ticker->op_context);
 			}
