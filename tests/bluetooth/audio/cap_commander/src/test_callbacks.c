@@ -1,7 +1,7 @@
-/* main.c - Application main entry point */
+/* test_callbacks.c - unit tests for callback related functionality */
 
 /*
- * Copyright (c) 2023 Nordic Semiconductor ASA
+ * Copyright (c) 2023 - 2024 Nordic Semiconductor ASA
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,7 +20,7 @@
 
 DEFINE_FFF_GLOBALS;
 
-struct cap_commander_test_cb_fixture {
+static struct cap_commander_test_cb_fixture {
 	struct bt_conn conns[CONFIG_BT_MAX_CONN];
 };
 
