@@ -17,4 +17,5 @@ target_sources(testbinary
     src/main.c
     src/test_volume.c
     src/test_callbacks.c
+    src/test_broadcast_reception.c
 )
