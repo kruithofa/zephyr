@@ -76,10 +76,62 @@ int bt_cap_commander_discover(struct bt_conn *conn)
 	return bt_cap_common_discover(conn, cap_commander_discover_complete);
 }
 
+static bool valid_broadcast_reception_start_param(
+	const struct bt_cap_commander_broadcast_reception_start_param *param)
+{
+	return true;
+}
+
 int bt_cap_commander_broadcast_reception_start(
 	const struct bt_cap_commander_broadcast_reception_start_param *param)
 {
-	return -ENOSYS;
+	const struct bt_cap_commander_proc_param *proc_param;
+	struct bt_cap_common_proc *active_proc;
+	struct bt_conn *conn;
+	int err;
+
+	if (bt_cap_common_proc_is_active()) {
+		LOG_DBG("A CAP procedure is already in progress");
+
+		return -EBUSY;
+	}
+
+	if (!valid_broadcast_reception_start(param)) {
+		return -EINVAL;
+	}
+
+	bt_cap_common_start_proc(BT_CAP_COMMON_PROC_TYPE_VOLUME_CHANGE, param->count);
+
+	active_proc = bt_cap_common_get_active_proc();
+
+	for (size_t i = 0U; i < param->count; i++) {
+		const struct bt_cap_commander_broadcast_reception_start_member_param
+			*member_param = &param->param[i];
+		struct bt_conn *member_conn =
+			bt_cap_common_get_member_conn(param->type, &member_param->member);
+
+		if (member_conn == NULL) {
+			LOG_DBG("Invalid param->members[%zu]", i);
+			return -EINVAL;
+		}
+		/* Store the necessary parameters as we cannot assume that the supplied parameters
+		 * are kept valid
+		 */
+		active_proc->proc_param.commander[i].conn = member_conn;
+	}
+
+	proc_param = &active_proc->proc_param.commander[0];
+	conn = proc_param->conn;
+	active_proc->proc_initiated_cnt++;
+
+	err = bt_xyz();
+
+	if (err != 0) {
+		LOG_DBG("Failed to start broadcast reception for conn %p: %d", (void *)conn, err);
+		return -ENOEXEC;
+	}
+
+	return 0;
 }
 
 int bt_cap_commander_broadcast_reception_stop(
@@ -118,6 +170,10 @@ static void cap_commander_unicast_audio_proc_complete(void)
 		break;
 #endif /* CONFIG_BT_VCP_VOL_CTLR_VOCS */
 #endif /* CONFIG_BT_VCP_VOL_CTLR */
+	case BT_CAP_COMMON_PROC_TYPE_BROADCAST_RECEPTION_START:
+		if (cap_cb->broadcast_reception_start != NULL) {
+			cap_cb->broadcast_reception_start(failed_conn, err);
+		}
 	case BT_CAP_COMMON_PROC_TYPE_NONE:
 	default:
 		__ASSERT(false, "Invalid proc_type: %u", proc_type);
