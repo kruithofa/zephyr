@@ -88,6 +88,7 @@ int bt_cap_commander_broadcast_reception_start(
 	const struct bt_cap_commander_proc_param *proc_param;
 	struct bt_cap_common_proc *active_proc;
 	struct bt_conn *conn;
+	struct bt_bap_scan_delegator_add_src_param add_src_param = {0};
 	int err;
 
 	if (bt_cap_common_proc_is_active()) {
@@ -118,19 +119,34 @@ int bt_cap_commander_broadcast_reception_start(
 		 * are kept valid
 		 */
 		active_proc->proc_param.commander[i].conn = member_conn;
+
+		proc_param = &active_proc->proc_param.commander[0];
+		conn = proc_param->conn;
+		active_proc->proc_initiated_cnt++;
+
+		add_src_param->pa_sync.addr = member_param->addr;
+		add_src_param->pa_sync.sid = member_param->adv_sid;
+		add_src_param->pa_sync.handle = member_param->handle; /* ?? */
+		add_src_param->pa_sync.interval = member_param->pa_interval;
+		add_src_param->broadcast_id = member_param->broadcast_id;
+		/* what with clock accuracy and phy? */
+
+
+		add_src_param.num_subgroups = member_param->num_subgroups;
+		for (uint8_t j = 0U; j < member_param->num_subgroups; j++) {
+			add_src_param->subgroups[j] = &subgroups[j]
+
+		}
+
+
+		err = bt_bap_scan_delegator_add_src(add_src_param)
+
+		if (err != 0) {
+			LOG_DBG("Failed to start broadcast reception for conn %p: %d",
+				(void *)conn, err);
+			return -ENOEXEC;
+		}
 	}
-
-	proc_param = &active_proc->proc_param.commander[0];
-	conn = proc_param->conn;
-	active_proc->proc_initiated_cnt++;
-
-	err = bt_xyz();
-
-	if (err != 0) {
-		LOG_DBG("Failed to start broadcast reception for conn %p: %d", (void *)conn, err);
-		return -ENOEXEC;
-	}
-
 	return 0;
 }
 
