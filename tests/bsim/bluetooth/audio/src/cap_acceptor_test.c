@@ -63,7 +63,7 @@ static struct bt_le_per_adv_sync *pa_sync;
 static uint32_t broadcaster_broadcast_id;
 static struct audio_test_stream broadcast_sink_streams[CONFIG_BT_BAP_BROADCAST_SNK_STREAM_COUNT];
 static struct bt_le_ext_adv *ext_adv;
-static uint32_t requested_bis_sync;
+static uint32_t requested_bis_sync[CONFIG_BT_BAP_BASS_MAX_SUBGROUPS];
 static const struct bt_bap_scan_delegator_recv_state *req_recv_state;
 
 static const struct bt_audio_codec_cap codec_cap = BT_AUDIO_CODEC_CAP_LC3(
@@ -413,14 +413,13 @@ static int bis_sync_req_cb(struct bt_conn *conn,
 			   const struct bt_bap_scan_delegator_recv_state *recv_state,
 			   const uint32_t bis_sync_req[CONFIG_BT_BAP_BASS_MAX_SUBGROUPS])
 {
-	/* We only care about a single subgroup in this test */
-	requested_bis_sync = bis_sync_req[0];
+	memcpy(requested_bis_sync, bis_sync_req, sizeof(uint32_t) * recv_state->num_subgroups);
 	broadcaster_broadcast_id = recv_state->broadcast_id;
-	if (bis_sync_req[0] != 0) {
-		SET_FLAG(flag_bis_sync_requested);
-	} else {
-		UNSET_FLAG(flag_bis_sync_requested);
+
+	for (int i = 0; i < recv_state->num_subgroups; i++) {
+		printk("BIS Sync %d: %d %d\n", i, requested_bis_sync[i], bis_sync_req[i]);
 	}
+	SET_FLAG(flag_bis_sync_requested);
 
 	return 0;
 }
@@ -1022,6 +1021,7 @@ static void test_cap_acceptor_broadcast_reception(void)
 {
 	static struct bt_bap_stream *bap_streams[ARRAY_SIZE(broadcast_sink_streams)];
 	size_t stream_count;
+	uint32_t total_bis;
 	int err;
 
 	init();
@@ -1080,6 +1080,7 @@ static void test_cap_acceptor_broadcast_reception(void)
 
 	printk("Waiting for data\n");
 	WAIT_FOR_FLAG(flag_received);
+	UNSET_FLAG(flag_bis_sync_requested);
 
 	backchannel_sync_send_all(); /* let others know we have received some data */
 
@@ -1088,7 +1089,21 @@ static void test_cap_acceptor_broadcast_reception(void)
 
 	backchannel_sync_send_all(); /* let others know we have received a metadata update */
 
-	backchannel_sync_send_all(); /* let broadcaster know we can stop the source */
+	/* Wait for request to not sync and then stop receiving */
+	WAIT_FOR_FLAG(flag_bis_sync_requested);
+	total_bis = 0U;
+	for (size_t i = 0U; i < CONFIG_BT_BAP_BASS_MAX_SUBGROUPS; i++) {
+		total_bis = total_bis | requested_bis_sync[i];
+	}
+
+	if (total_bis != 0U) {
+		FAIL("Did not receive request to remove sync to bis\n");
+		return;
+	}
+
+	broadcast_stream_ops.recv = NULL;
+
+	backchannel_sync_send_all(); /* let others know we've stopped receiving */
 
 	/* The order of PA sync lost and BIG Sync lost is irrelevant
 	 * and depend on timeout parameters. We just wait for PA first, but
