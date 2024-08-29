@@ -967,6 +967,67 @@ struct bt_cap_commander_broadcast_reception_stop_param {
 int bt_cap_commander_broadcast_reception_stop(
 	const struct bt_cap_commander_broadcast_reception_stop_param *param);
 
+/**
+ * Parameters part of @ref bt_cap_commander_distribute_broadcast_code_param for
+ * bt_cap_commander_distribute_broadcast_code()
+ */
+struct bt_cap_commander_distribute_broadcast_code_member_param {
+	/** Coordinated or ad-hoc set member. */
+	union bt_cap_set_member member;
+
+	/** Address of the advertiser. */
+	bt_addr_le_t addr;
+
+	/** SID of the advertising set. */
+	uint8_t adv_sid;
+
+	/**
+	 * @brief Periodic advertising interval in milliseconds.
+	 *
+	 * BT_BAP_PA_INTERVAL_UNKNOWN if unknown.
+	 */
+	uint16_t pa_interval;
+
+	/** 24-bit broadcast ID */
+	uint32_t broadcast_id;
+
+	/**
+	 * @brief Pointer to array of subgroups
+	 *
+	 * At least one bit in one of the subgroups bis_sync parameters shall be set.
+	 */
+	struct bt_bap_bass_subgroup subgroups[CONFIG_BT_BAP_BASS_MAX_SUBGROUPS];
+
+	/** Number of subgroups */
+	size_t num_subgroups;
+};
+
+/** Parameters for distributing broadcast code */
+struct bt_cap_commander_distribute_broadcast_code_param {
+	/** The type of the set */
+	enum bt_cap_set_type type;
+
+	/** The set of devices for this procedure */
+	struct bt_cap_commander_distribute_broadcast_code_member_param *param;
+
+	/** The broadcast code */
+	uint8_t broadcast_code[BT_AUDIO_BROADCAST_CODE_SIZE];
+
+	/** The number of parametersin @p param */
+	size_t count;
+}
+
+/**
+ * @brief Distributes the broadcast code to one or more remote Common Audio Profile
+ * Acceptors
+ *
+ * @param param The parameters to distribute the broadcast code
+ *
+ * @return 0 on success or negative error value on failure.
+ */
+int bt_cap_commander_distribute_broadcast_code(
+	const struct bt_cap_commander_distribute_broadcast_code_param *param);
+
 /** Parameters for changing absolute volume  */
 struct bt_cap_commander_change_volume_param {
 	/** The type of the set. */

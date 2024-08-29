@@ -407,6 +407,12 @@ int bt_cap_commander_broadcast_reception_stop(
 	return -ENOSYS;
 }
 
+itn bt_cap_commander_distribute_broadcast_codee(
+	const struct bt_cap_commander_distribute_broadcast_code *param)
+{
+	return -ENOSYS;
+}
+
 static void cap_commander_proc_complete(void)
 {
 	struct bt_cap_common_proc *active_proc = bt_cap_common_get_active_proc();
