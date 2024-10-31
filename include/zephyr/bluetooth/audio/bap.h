@@ -2602,7 +2602,7 @@ struct bt_bap_broadcast_assistant_cb {
 	 * @param conn    The connection to the peer device.
 	 * @param err     Error value. 0 on success, GATT error on fail.
 	 */
-	void (*broadcast_code)(struct bt_conn *conn, int err);
+	void (*set_broadcast_code)(struct bt_conn *conn, int err);
 
 	/**
 	 * @brief Callback function for bt_bap_broadcast_assistant_rem_src().

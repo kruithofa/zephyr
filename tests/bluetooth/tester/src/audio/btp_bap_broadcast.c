@@ -1302,7 +1302,7 @@ static void bap_broadcast_assistant_mod_src_cb(struct bt_conn *conn, int err)
 	LOG_DBG("err: %d", err);
 }
 
-static void bap_broadcast_assistant_broadcast_code_cb(struct bt_conn *conn, int err)
+static void bap_broadcast_assistant_set_broadcast_code_cb(struct bt_conn *conn, int err)
 {
 	LOG_DBG("err: %d", err);
 }
@@ -1321,7 +1321,7 @@ static struct bt_bap_broadcast_assistant_cb broadcast_assistant_cb = {
 	.scan_stop = bap_broadcast_assistant_scan_stop_cb,
 	.add_src = bap_broadcast_assistant_add_src_cb,
 	.mod_src = bap_broadcast_assistant_mod_src_cb,
-	.broadcast_code = bap_broadcast_assistant_broadcast_code_cb,
+	.set_broadcast_code = bap_broadcast_assistant_set_broadcast_code_cb,
 	.rem_src = bap_broadcast_assistant_rem_src_cb,
 };
 

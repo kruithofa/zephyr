@@ -808,8 +808,8 @@ static void bap_broadcast_assistant_write_cp_cb(struct bt_conn *conn, uint8_t er
 			}
 			break;
 		case BT_BAP_BASS_OP_BROADCAST_CODE:
-			if (listener->broadcast_code != NULL) {
-				listener->broadcast_code(conn, err);
+			if (listener->set_broadcast_code != NULL) {
+				listener->set_broadcast_code(conn, err);
 			}
 			break;
 		case BT_BAP_BASS_OP_REM_SRC:
